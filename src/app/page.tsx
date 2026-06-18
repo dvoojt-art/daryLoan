@@ -32,7 +32,7 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                   Smart Loan Management <br />
-                  <span className="text-primary">For Community Growth</span>
+                  <span className="text-yellow-600">For Community Growth</span>
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl font-body">
                   Automate records, streamline collections, and make data-driven decisions with our AI-powered fintech platform.
