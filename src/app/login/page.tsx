@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wallet, ShieldCheck, User, Lock, Mail, Loader2 } from 'lucide-react';
+import { Wallet, ShieldCheck, User, Lock, Mail, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -24,7 +24,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 relative">
+      <div className="absolute top-8 left-8">
+        <Button asChild variant="ghost" size="sm" className="gap-2">
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Homepage
+          </Link>
+        </Button>
+      </div>
+
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
           <Link href="/" className="flex items-center justify-center gap-2">
