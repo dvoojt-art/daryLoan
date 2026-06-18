@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ExcelFormulaInput } from '@/components/ExcelFormulaInput';
-import { ShieldCheck, ArrowLeft, Info } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Info, FunctionSquare } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
 
@@ -35,7 +35,7 @@ export default function LoanRequestPage() {
 
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-headline font-bold">New Loan Application</h1>
-        <p className="text-muted-foreground">Fill out the details below to request financial assistance.</p>
+        <p className="text-muted-foreground">Adjust your loan parameters to see calculations powered by our Excel Formula Engine.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -44,7 +44,7 @@ export default function LoanRequestPage() {
           <form onSubmit={handleSubmit}>
             <CardHeader>
               <CardTitle>Loan Details</CardTitle>
-              <CardDescription>Adjust the sliders to see auto-calculated monthly payments.</CardDescription>
+              <CardDescription>Drag sliders to update values in the Formula Engine.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
               <div className="space-y-4">
@@ -94,15 +94,20 @@ export default function LoanRequestPage() {
             </CardContent>
             <CardFooter className="flex justify-end gap-3 border-t pt-6">
               <Button type="button" variant="ghost">Cancel</Button>
-              <Button type="submit" className="bg-primary">Submit Application</Button>
+              <Button type="submit" className="bg-primary shadow-md">Submit Application</Button>
             </CardFooter>
           </form>
         </Card>
 
         {/* Calculation Preview Section */}
         <div className="space-y-6">
+          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest mb-2">
+            <FunctionSquare className="h-4 w-4" />
+            Live Formula Engine
+          </div>
+          
           <ExcelFormulaInput 
-            label="Est. Monthly Amortization"
+            label="Estimated Monthly Due"
             amount={amount}
             rate={interestRate}
             term={term}
@@ -116,16 +121,25 @@ export default function LoanRequestPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Your current contribution consistency is high. Approval probability is estimated at <b>85%</b> based on system historical data.
-              </p>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Your current contribution consistency is high. Approval probability calculated via logic:
+                </p>
+                <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500">
+                  =IF(CONSISTENCY &gt; 0.8, "85%", "Review")
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-700">Result:</span>
+                  <span className="text-lg font-headline font-bold text-primary">85%</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <div className="p-4 bg-accent/5 rounded-lg border border-accent/10 flex gap-3">
+          <div className="p-4 bg-accent/5 rounded-xl border border-accent/10 flex gap-3">
             <Info className="h-5 w-5 text-accent shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              Final interest rates may vary slightly after admin review and risk assessment analysis.
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Calculations are based on <b>Admin Configured Formulas</b>. Final interest rates may be adjusted during manual review.
             </p>
           </div>
         </div>

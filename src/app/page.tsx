@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Wallet, ShieldCheck, PieChart, Zap, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Wallet, ShieldCheck, PieChart, Zap, ArrowRight, CheckCircle2, Table as TableIcon, FunctionSquare } from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -20,6 +20,9 @@ export default function LandingPage() {
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="#features">
             Features
+          </Link>
+          <Link className="text-sm font-medium hover:text-primary transition-colors" href="/login">
+            Portal Login
           </Link>
         </nav>
       </header>
@@ -77,48 +80,76 @@ export default function LandingPage() {
         </section>
 
         {/* Excel Sync Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-background">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
           <div className="container px-4 md:px-6">
-            <div className="grid gap-10 px-10 md:gap-16 lg:grid-cols-2">
-              <div className="space-y-4">
-                <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl">Excel-Sync Formulas</h2>
-                <p className="text-muted-foreground md:text-lg">
-                  No more manual calculations. Our smart forms use pre-defined Excel-like logic to automate interest rates and monthly amortizations.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-accent" />
-                    <span>Real-time PMT calculation</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-accent" />
-                    <span>Automated amortization schedules</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-accent" />
-                    <span>One-click exports for bookkeeping</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="bg-white p-8 rounded-3xl shadow-2xl border border-primary/10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4">
-                  <div className="h-24 w-24 bg-accent/10 rounded-full blur-3xl" />
+            <div className="grid gap-10 px-4 md:gap-16 lg:grid-cols-2 items-center">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                  <FunctionSquare className="h-3 w-3" />
+                  Excel-Sync Formula Engine
                 </div>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Formula Logic</label>
-                    <div className="bg-secondary p-3 rounded-lg font-code text-sm text-primary">
-                      =PMT(INTEREST_RATE/12, TERM_MONTHS, LOAN_AMOUNT)
-                    </div>
+                <h2 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl">Configure with the Familiarity of Excel</h2>
+                <p className="text-muted-foreground md:text-lg leading-relaxed">
+                  Admins can customize financial logic using standard Excel syntax. Automate everything from simple sums to complex conditional logic without writing a single line of code.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium">=SUM(Payments) for real-time ledgers</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-background p-4 rounded-xl">
-                      <p className="text-sm text-muted-foreground">Interest</p>
-                      <p className="text-2xl font-headline font-bold">10%</p>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium">=IF(Balance &lt;= 0, "Paid", "Active")</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium">=LoanAmount * InterestRate logic</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium">=Contribution + Savings automated pool</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="relative">
+                <div className="absolute -inset-4 bg-primary/10 rounded-3xl blur-2xl opacity-50" />
+                <div className="relative bg-white p-8 rounded-3xl shadow-2xl border border-primary/10 overflow-hidden">
+                  <div className="flex items-center justify-between mb-8 border-b pb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-green-500 h-3 w-3 rounded-full" />
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Admin Formula Editor</span>
                     </div>
-                    <div className="bg-background p-4 rounded-xl">
-                      <p className="text-sm text-muted-foreground">Result</p>
-                      <p className="text-2xl font-headline font-bold text-accent">₱1,245.50</p>
+                    <TableIcon className="h-5 w-5 text-slate-300" />
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Formula Input (Cell B14)</label>
+                      <div className="bg-slate-100 p-4 rounded-xl font-code text-sm text-primary border-2 border-primary/20 flex items-center gap-3">
+                        <span className="text-primary font-bold">fx</span>
+                        <span className="text-slate-800">=PMT(INTEREST_RATE/12, TERM, LOAN_AMOUNT)</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Status Check</p>
+                        <div className="font-code text-xs text-slate-500 mb-2">=IF(B14 &gt; 0, "Valid", "N/A")</div>
+                        <p className="text-xl font-headline font-bold text-green-600">Valid</p>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Resulting Amortization</p>
+                        <div className="font-code text-xs text-slate-500 mb-2">Display Value</div>
+                        <p className="text-xl font-headline font-bold text-accent">₱1,245.50</p>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 flex items-center justify-center">
+                      <div className="bg-primary/5 px-4 py-2 rounded-full flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                        <span className="text-[10px] font-bold text-primary uppercase">Formula Engine Active</span>
+                      </div>
                     </div>
                   </div>
                 </div>
