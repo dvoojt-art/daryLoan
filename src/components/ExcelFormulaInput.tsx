@@ -20,22 +20,18 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
   const [totalInterest, setTotalInterest] = useState<number>(0);
 
   useEffect(() => {
-    // We treat 'rate' as the periodic monthly rate (e.g., 0.10 for 10% monthly)
-    const periodicRate = rate;
-    let pmt = 0;
+    // New Logic: Simple interest of 10% per month
+    // 1 month = 10%, 2 months = 20%, 3 months = 30%
+    const monthlyRate = rate; // 0.10 (10%)
     
-    if (periodicRate === 0) {
-      pmt = amount / term;
-    } else {
-      // Standard PMT (Amortization) Formula: 
-      // PMT = (r * (1+r)^n) / ((1+r)^n - 1) * Principal
-      // where r = periodic rate, n = number of periods
-      pmt = (periodicRate * Math.pow(1 + periodicRate, term)) / (Math.pow(1 + periodicRate, term) - 1) * amount;
-    }
+    // Total Interest = Principal * (Rate * Term)
+    const interest = amount * (monthlyRate * term);
     
-    // Total payable = payment * term periods
-    const totalPayable = pmt * term;
-    const interest = totalPayable - amount;
+    // Total Payable = Principal + Total Interest
+    const totalPayable = amount + interest;
+    
+    // Periodic payment (e.g. per month)
+    const pmt = totalPayable / term;
 
     setMonthlyPayment(parseFloat(pmt.toFixed(2)));
     setTotalInterest(parseFloat(interest.toFixed(2)));
@@ -57,15 +53,15 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
       </div>
 
       <div className="space-y-3">
-        {/* PMT Calculation */}
+        {/* Simple Interest Formula Display */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Amortization Formula</span>
-            <span className="text-[10px] font-code bg-primary/10 text-primary px-1.5 py-0.5 rounded">FX-ENGINE v1.0</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">Community Interest Rule</span>
+            <span className="text-[10px] font-code bg-primary/10 text-primary px-1.5 py-0.5 rounded">FX-ENGINE v1.1</span>
           </div>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            <span className="text-blue-600 font-bold">=PMT</span>
-            <span>({(rate * 100).toFixed(1)}% monthly, {formatTermDisplay(term)}, -{amount.toLocaleString()})</span>
+            <span className="text-blue-600 font-bold">=AMOUNT</span>
+            <span> * (1 + ({(rate * 100).toFixed(0)}% * {formatTermDisplay(term)})) / {term}</span>
           </div>
           <Input 
             readOnly 
@@ -73,19 +69,19 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
             className="font-headline font-bold text-xl text-primary bg-white h-12 border-slate-200"
           />
           <p className="text-[10px] text-muted-foreground px-1 italic">
-            * Estimated payment per installment period
+            * Payment includes principal + {(term * 10).toFixed(0)}% cumulative interest
           </p>
         </div>
 
-        {/* Simple Interest Formula Demonstration */}
+        {/* Total Interest Logic Demonstration */}
         <div className="space-y-1 pt-2 border-t border-slate-100">
           <span className="text-[10px] font-bold text-slate-400 uppercase">Total Interest Logic</span>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            <span className="text-green-600 font-bold">=SUM</span>
-            <span>(TotalPayments) - Principal</span>
+            <span className="text-green-600 font-bold">=INTEREST</span>
+            <span>(₱{amount.toLocaleString()} * {(rate * 100).toFixed(0)}% * {term} mo)</span>
           </div>
           <div className="flex justify-between items-center text-sm px-1">
-            <span className="text-muted-foreground italic text-xs">Interest Burden:</span>
+            <span className="text-muted-foreground italic text-xs">Total Interest ({ (term * 10).toFixed(0) }%):</span>
             <span className="font-bold text-slate-700">₱{totalInterest.toLocaleString()}</span>
           </div>
         </div>
@@ -93,7 +89,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
 
       <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-medium">
         <Calculator className="h-3 w-3" />
-        <span>RECALCULATING ON INPUT CHANGE...</span>
+        <span>CALCULATING: 10% PER MONTH RULE</span>
       </div>
     </div>
   );
