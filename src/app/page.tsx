@@ -24,9 +24,6 @@ export default function LandingPage() {
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="/login">
             Login
           </Link>
-          <Button asChild size="sm" className="bg-accent hover:bg-accent/90">
-            <Link href="/login">Get Started</Link>
-          </Button>
         </nav>
       </header>
 
