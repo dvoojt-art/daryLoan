@@ -14,6 +14,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent 
+} from '@/components/ui/chart';
+import { 
+  Line, 
+  LineChart, 
+  ResponsiveContainer, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid 
+} from 'recharts';
+import { 
   CreditCard, 
   Calendar, 
   ArrowRight, 
@@ -25,7 +38,8 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
-  FileJson
+  FileJson,
+  Plus
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -42,10 +56,15 @@ export default function MemberDashboard() {
   const activeLoan = myLoans.find(l => l.status === 'approved');
   const overdueLoan = myLoans.find(l => l.status === 'overdue');
 
+  const chartData = myContributions.map(c => ({
+    date: c.date,
+    amount: c.amount,
+  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
   const handleExport = (format: string) => {
     toast({
-      title: "Export Initiated",
-      description: `Your contribution ledger is being generated in ${format} format.`,
+      title: "Statement Ready",
+      description: `Your contribution statement has been generated in ${format} format.`,
     });
   };
 
@@ -53,12 +72,19 @@ export default function MemberDashboard() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Welcome, John</h1>
-          <p className="text-muted-foreground">Monitor your contributions and loan status.</p>
+          <h1 className="text-3xl font-headline font-bold">Member Portal</h1>
+          <p className="text-muted-foreground">Manage your savings and loan applications.</p>
         </div>
-        <Button asChild className="bg-accent hover:bg-accent/90">
-          <Link href="/dashboard/member/request">Apply for Loan <ArrowRight className="ml-2 h-4 w-4" /></Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/member/settings">Profile Settings</Link>
+          </Button>
+          <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold">
+            <Link href="/dashboard/member/request">
+              <Plus className="mr-2 h-4 w-4" /> Request Loan
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Member Alerts */}
@@ -66,150 +92,172 @@ export default function MemberDashboard() {
         {overdueLoan && (
           <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Missed Payment Alert</AlertTitle>
+            <AlertTitle>Action Required: Overdue Payment</AlertTitle>
             <AlertDescription>
-              Your loan of ₱{overdueLoan.amount.toLocaleString()} is currently overdue. Please settle it to avoid penalties.
+              Your loan (₱{overdueLoan.amount.toLocaleString()}) is past its due date. Please settle immediately.
             </AlertDescription>
           </Alert>
         )}
         {activeLoan && activeLoan.dueDate && (
           <Alert className="bg-accent/5 border-accent/20 text-accent-foreground">
             <Clock className="h-4 w-4 text-accent" />
-            <AlertTitle>Upcoming Due Date</AlertTitle>
+            <AlertTitle>Payment Reminder</AlertTitle>
             <AlertDescription>
-              Your next payment for your ₱{activeLoan.amount.toLocaleString()} loan is due on <b>{activeLoan.dueDate}</b>.
+              Your next ₱1,245.50 payment is due on <b>{activeLoan.dueDate}</b>.
             </AlertDescription>
           </Alert>
         )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Total Contributions */}
-        <Card className="border-none shadow-sm overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <TrendingUp className="h-24 w-24 text-primary" />
-          </div>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Contributions</CardTitle>
+        {/* Total Contributions & Growth Chart */}
+        <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Contribution Growth</CardTitle>
+              <div className="text-3xl font-headline font-bold text-primary">₱{totalContributed.toLocaleString()}</div>
+            </div>
+            <TrendingUp className="h-5 w-5 text-green-500" />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-4xl font-headline font-bold text-primary">₱{totalContributed.toLocaleString()}</div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-medium">
-                <span>Member Since 2023</span>
-                <span>Active Member</span>
-              </div>
-              <Progress value={65} className="h-2" />
+          <CardContent>
+            <div className="h-[200px] w-full mt-4">
+              <ChartContainer
+                config={{
+                  amount: {
+                    label: "Contribution",
+                    color: "hsl(var(--primary))",
+                  },
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#888888" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false} 
+                    />
+                    <YAxis 
+                      stroke="#888888" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickFormatter={(value) => `₱${value}`}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="amount" 
+                      stroke="var(--color-amount)" 
+                      strokeWidth={3} 
+                      dot={{ r: 4, fill: "var(--color-amount)" }} 
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Active Loan Status */}
-        <Card className="border-none shadow-sm">
+        {/* Active Loan Details */}
+        <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Loan</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Loan Summary</CardTitle>
             <CreditCard className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             {activeLoan ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div className="text-3xl font-headline font-bold">₱{activeLoan.amount.toLocaleString()}</div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">On Track</Badge>
-                </div>
-                <div className="space-y-2 pt-2 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Next Payment</span>
-                    <span className="font-semibold">{activeLoan.dueDate || 'N/A'}</span>
+              <div className="space-y-6">
+                <div>
+                  <div className="flex justify-between items-end mb-1">
+                    <div className="text-3xl font-headline font-bold text-slate-800">₱{activeLoan.amount.toLocaleString()}</div>
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Active</Badge>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Term Remaining</span>
-                    <span className="font-semibold">8 / 12 Months</span>
+                  <p className="text-xs text-muted-foreground">Principal amount approved</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>Repayment Progress</span>
+                    <span>40%</span>
                   </div>
+                  <Progress value={40} className="h-2 bg-slate-100" />
                 </div>
-              </div>
-            ) : overdueLoan ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div className="text-3xl font-headline font-bold">₱{overdueLoan.amount.toLocaleString()}</div>
-                  <Badge variant="destructive">Overdue</Badge>
-                </div>
-                <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs text-destructive font-medium">Action required: Contact support immediately.</p>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Next Due</p>
+                    <p className="text-sm font-semibold">{activeLoan.dueDate}</p>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Remaining</p>
+                    <p className="text-sm font-semibold">8 Months</p>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
-                <div className="bg-muted p-3 rounded-full">
-                  <Info className="h-6 w-6 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                <div className="bg-muted p-4 rounded-full">
+                  <Clock className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground">No active loans currently.</p>
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-700">No Active Loans</p>
+                  <p className="text-xs text-muted-foreground">Need financial support? Apply today.</p>
+                </div>
+                <Button asChild size="sm" variant="outline" className="w-full">
+                  <Link href="/dashboard/member/request">Start Application</Link>
+                </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Notifications/Insights */}
-        <Card className="border-none shadow-sm bg-accent text-white">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium uppercase tracking-wider text-white/80">Growth Insight</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm leading-relaxed">
-              Based on your contribution consistency, you are eligible for an increased credit limit of up to <b>₱10,000</b>.
-            </p>
-            <Button variant="secondary" size="sm" className="w-full text-accent font-bold">
-              Check Eligibility
-            </Button>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Contributions */}
-        <Card className="border-none shadow-sm">
+        {/* Contribution Ledger with Export */}
+        <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Contribution Ledger</CardTitle>
-              <CardDescription>Your monthly savings history.</CardDescription>
+              <CardTitle className="text-lg">Contribution Ledger</CardTitle>
+              <CardDescription>Comprehensive savings statement.</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 gap-1">
-                    <Download className="h-3.5 w-3.5" /> Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleExport('Excel')}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" /> Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('PDF')}>
-                    <FileText className="mr-2 h-4 w-4 text-red-600" /> PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('CSV')}>
-                    <FileJson className="mr-2 h-4 w-4 text-blue-600" /> CSV
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <History className="h-5 w-5 text-muted-foreground" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-2">
+                  <Download className="h-4 w-4" /> Download Statement
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('Excel')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" /> Export to Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('PDF')}>
+                  <FileText className="mr-2 h-4 w-4 text-red-600" /> Export to PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('CSV')}>
+                  <FileJson className="mr-2 h-4 w-4 text-blue-600" /> Export to CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                <TableRow className="bg-slate-50/50">
+                  <TableHead className="font-bold">Transaction Date</TableHead>
+                  <TableHead className="font-bold">Reference ID</TableHead>
+                  <TableHead className="text-right font-bold">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {myContributions.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>{c.date}</TableCell>
-                    <TableCell className="text-xs font-code">TXN-{c.id.toUpperCase()}</TableCell>
-                    <TableCell className="text-right font-semibold">₱{c.amount.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-[10px] text-muted-foreground tracking-tighter uppercase">DARY-{c.id}</TableCell>
+                    <TableCell className="text-right font-bold text-primary">₱{c.amount.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -217,42 +265,43 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        {/* Loan Requests History */}
-        <Card className="border-none shadow-sm">
+        {/* Loan History Table */}
+        <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Loan History</CardTitle>
-              <CardDescription>Requests and repayment status.</CardDescription>
+              <CardTitle className="text-lg">Loan Request History</CardTitle>
+              <CardDescription>Track status of past and current requests.</CardDescription>
             </div>
             <Calendar className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Purpose</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Principal</TableHead>
+                <TableRow className="bg-slate-50/50">
+                  <TableHead className="font-bold">Purpose</TableHead>
+                  <TableHead className="font-bold">Status</TableHead>
+                  <TableHead className="text-right font-bold">Principal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {myLoans.map((l) => (
                   <TableRow key={l.id}>
-                    <TableCell>{l.purpose}</TableCell>
+                    <TableCell className="font-medium">{l.purpose}</TableCell>
                     <TableCell>
                       <Badge 
                         variant="outline" 
                         className={cn(
+                          "capitalize",
                           l.status === 'approved' && "bg-green-50 text-green-700 border-green-200",
                           l.status === 'pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
                           l.status === 'rejected' && "bg-red-50 text-red-700 border-red-200",
-                          l.status === 'overdue' && "bg-red-50 text-red-700 border-red-200"
+                          l.status === 'overdue' && "bg-destructive/10 text-destructive border-destructive/20"
                         )}
                       >
                         {l.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">₱{l.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-bold text-slate-700">₱{l.amount.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

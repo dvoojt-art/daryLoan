@@ -37,16 +37,19 @@ export const MOCK_MEMBERS: Member[] = [
 ];
 
 export const MOCK_LOANS: Loan[] = [
-  { id: 'l1', memberId: 'm1', amount: 2000, status: 'approved', requestDate: '2024-02-10', dueDate: '2024-04-10', interestRate: 0.05, termMonths: 12, purpose: 'Home Repair' },
-  { id: 'l2', memberId: 'm2', amount: 15000, status: 'pending', requestDate: '2024-03-01', interestRate: 0.04, termMonths: 24, purpose: 'Education' },
-  { id: 'l3', memberId: 'm3', amount: 500, status: 'rejected', requestDate: '2024-01-15', interestRate: 0.08, termMonths: 6, purpose: 'Emergency' },
-  { id: 'l4', memberId: 'm2', amount: 5000, status: 'overdue', requestDate: '2023-12-01', dueDate: '2024-03-01', interestRate: 0.05, termMonths: 12, purpose: 'Business Capital' },
+  { id: 'l1', memberId: 'm1', amount: 2000, status: 'approved', requestDate: '2024-02-10', dueDate: '2024-04-10', interestRate: 0.10, termMonths: 12, purpose: 'Home Repair' },
+  { id: 'l2', memberId: 'm2', amount: 15000, status: 'pending', requestDate: '2024-03-01', interestRate: 0.10, termMonths: 24, purpose: 'Education' },
+  { id: 'l3', memberId: 'm3', amount: 500, status: 'rejected', requestDate: '2024-01-15', interestRate: 0.10, termMonths: 6, purpose: 'Emergency' },
+  { id: 'l4', memberId: 'm2', amount: 5000, status: 'overdue', requestDate: '2023-12-01', dueDate: '2024-03-01', interestRate: 0.10, termMonths: 12, purpose: 'Business Capital' },
 ];
 
 export const MOCK_CONTRIBUTIONS: Contribution[] = [
-  { id: 'c1', memberId: 'm1', amount: 500, date: '2024-01-15' },
-  { id: 'c2', memberId: 'm1', amount: 500, date: '2024-02-15' },
-  { id: 'c3', memberId: 'm2', amount: 1000, date: '2024-01-20' },
-  { id: 'c4', memberId: 'm2', amount: 1000, date: '2024-02-20' },
-  { id: 'c5', memberId: 'm3', amount: 200, date: '2024-02-25' },
+  { id: 'c1', memberId: 'm1', amount: 500, date: '2023-10-15' },
+  { id: 'c2', memberId: 'm1', amount: 500, date: '2023-11-15' },
+  { id: 'c3', memberId: 'm1', amount: 800, date: '2023-12-15' },
+  { id: 'c4', memberId: 'm1', amount: 1000, date: '2024-01-15' },
+  { id: 'c5', memberId: 'm1', amount: 1000, date: '2024-02-15' },
+  { id: 'c6', memberId: 'm2', amount: 1000, date: '2024-01-20' },
+  { id: 'c7', memberId: 'm2', amount: 1000, date: '2024-02-20' },
+  { id: 'c8', memberId: 'm3', amount: 200, date: '2024-02-25' },
 ];
