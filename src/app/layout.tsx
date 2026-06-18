@@ -3,8 +3,8 @@ import type {Metadata} from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'LendMate | Smart Loan Management',
-  description: 'Automate member records, loan management, and financial reporting with LendMate.',
+  title: 'DaryLoan | Smart Loan Management',
+  description: 'Automate member records, loan management, and financial reporting with DaryLoan.',
 };
 
 export default function RootLayout({

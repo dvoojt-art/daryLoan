@@ -57,7 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="h-16 flex items-center px-6 border-b">
             <Link href="/" className="flex items-center gap-2">
               <Wallet className="h-6 w-6 text-primary" />
-              <span className="font-headline font-bold text-xl text-primary">LendMate</span>
+              <span className="font-headline font-bold text-xl text-primary">DaryLoan</span>
             </Link>
           </div>
 

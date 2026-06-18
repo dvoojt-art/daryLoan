@@ -10,7 +10,7 @@ export default function LandingPage() {
       <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <Link className="flex items-center justify-center gap-2" href="#">
           <Wallet className="h-6 w-6 text-primary" />
-          <span className="font-headline font-bold text-xl tracking-tighter text-primary">LendMate</span>
+          <span className="font-headline font-bold text-xl tracking-tighter text-primary">DaryLoan</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="#features">
@@ -134,7 +134,7 @@ export default function LandingPage() {
 
       <footer className="w-full py-6 border-t bg-white">
         <div className="container px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">© 2024 LendMate Inc. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2024 DaryLoan Inc. All rights reserved.</p>
           <nav className="flex gap-4 sm:gap-6">
             <Link className="text-sm hover:underline underline-offset-4" href="#">
               Privacy

@@ -23,7 +23,7 @@ export default function LoginPage() {
             <div className="bg-primary p-2 rounded-lg">
               <Wallet className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-3xl font-headline font-bold text-primary">LendMate</h1>
+            <h1 className="text-3xl font-headline font-bold text-primary">DaryLoan</h1>
           </Link>
           <p className="text-muted-foreground">Secure Portal Login</p>
         </div>
