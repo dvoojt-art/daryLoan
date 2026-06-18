@@ -22,7 +22,7 @@ export default function LandingPage() {
             Features
           </Link>
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="/login">
-            Portal Login
+            Admin Portal
           </Link>
         </nav>
       </header>
