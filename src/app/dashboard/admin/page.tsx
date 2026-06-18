@@ -123,7 +123,7 @@ export default function AdminDashboard() {
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Disbursed</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Released</CardTitle>
             <HandCoins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
