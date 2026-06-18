@@ -17,23 +17,35 @@ interface ExcelFormulaInputProps {
 
 export function ExcelFormulaInput({ label, amount, rate, term, className, onChange }: ExcelFormulaInputProps) {
   const [monthlyPayment, setMonthlyPayment] = useState<number>(0);
-  const [interestOnly, setInterestOnly] = useState<number>(0);
+  const [totalInterest, setTotalInterest] = useState<number>(0);
 
   useEffect(() => {
-    // PMT Formula: (rate * (1 + rate)^term) / ((1 + rate)^term - 1) * amount
+    // Standard Amortization Formula logic applied via JS
+    // We treat 'term' as months (e.g., 0.25 = 1 week)
     const monthlyRate = rate / 12;
     let pmt = 0;
+    
     if (monthlyRate === 0) {
       pmt = amount / term;
     } else {
+      // PMT Formula: (rate * (1 + rate)^term) / ((1 + rate)^term - 1) * amount
       pmt = (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1) * amount;
     }
     
+    const totalPayable = pmt * term;
+    const interest = totalPayable - amount;
+
     setMonthlyPayment(parseFloat(pmt.toFixed(2)));
-    setInterestOnly(parseFloat((amount * rate).toFixed(2)));
+    setTotalInterest(parseFloat(interest.toFixed(2)));
     
     if (onChange) onChange(pmt);
   }, [amount, rate, term, onChange]);
+
+  const formatTermDisplay = (t: number) => {
+    if (t === 0.25) return "7 days";
+    if (t === 0.5) return "15 days";
+    return `${t} mo`;
+  };
 
   return (
     <div className={cn("space-y-4 p-4 border rounded-xl bg-slate-50 shadow-sm border-slate-200", className)}>
@@ -51,25 +63,28 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
           </div>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             <span className="text-blue-600 font-bold">=PMT</span>
-            <span>({rate * 100}%/12, {term}, -{amount.toLocaleString()})</span>
+            <span>({(rate * 100).toFixed(1)}%/12, {formatTermDisplay(term)}, -{amount.toLocaleString()})</span>
           </div>
           <Input 
             readOnly 
             value={`₱${monthlyPayment.toLocaleString()}`}
             className="font-headline font-bold text-xl text-primary bg-white h-12 border-slate-200"
           />
+          <p className="text-[10px] text-muted-foreground px-1 italic">
+            * Estimated payment per installment period
+          </p>
         </div>
 
         {/* Simple Interest Formula Demonstration */}
         <div className="space-y-1 pt-2 border-t border-slate-100">
-          <span className="text-[10px] font-bold text-slate-400 uppercase">Annual Interest Logic</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase">Total Interest Logic</span>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-            <span className="text-green-600 font-bold">=IF</span>
-            <span>(LoanAmount*InterestRate, "Valid", "Error")</span>
+            <span className="text-green-600 font-bold">=SUM</span>
+            <span>(TotalPayments) - Principal</span>
           </div>
           <div className="flex justify-between items-center text-sm px-1">
-            <span className="text-muted-foreground italic text-xs">Annual Interest:</span>
-            <span className="font-bold text-slate-700">₱{interestOnly.toLocaleString()}</span>
+            <span className="text-muted-foreground italic text-xs">Interest Burden:</span>
+            <span className="font-bold text-slate-700">₱{totalInterest.toLocaleString()}</span>
           </div>
         </div>
       </div>

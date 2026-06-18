@@ -14,7 +14,7 @@ import { toast } from '@/hooks/use-toast';
 
 export default function LoanRequestPage() {
   const [amount, setAmount] = useState(5000);
-  const [term, setTerm] = useState(12);
+  const [term, setTerm] = useState(6); // Default to 6 months
   const interestRate = 0.05; // 5% fixed interest for demonstration
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -23,6 +23,12 @@ export default function LoanRequestPage() {
       title: "Application Submitted",
       description: "Your loan request is now pending admin review.",
     });
+  };
+
+  const formatTerm = (val: number) => {
+    if (val === 0.25) return "7 Days";
+    if (val === 0.5) return "15 Days";
+    return `${val} Months`;
   };
 
   return (
@@ -34,7 +40,7 @@ export default function LoanRequestPage() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-headline font-bold">New Loan Application</h1>
+        <h1 className="text-3xl font-headline font-bold text-slate-800">New Loan Application</h1>
         <p className="text-muted-foreground">Adjust your loan parameters to see calculations powered by our Excel Formula Engine.</p>
       </div>
 
@@ -67,19 +73,19 @@ export default function LoanRequestPage() {
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label>Repayment Term (Months)</Label>
-                  <span className="text-lg font-headline font-bold text-primary">{term} Months</span>
+                  <Label>Repayment Term</Label>
+                  <span className="text-lg font-headline font-bold text-primary">{formatTerm(term)}</span>
                 </div>
                 <Slider 
                   value={[term]} 
                   onValueChange={(v) => setTerm(v[0])} 
-                  min={6} 
-                  max={36} 
-                  step={6} 
+                  min={0.25} 
+                  max={11} 
+                  step={0.25} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Min: 6 Months</span>
-                  <span>Max: 36 Months</span>
+                  <span>Min: 7 Days</span>
+                  <span>Max: 11 Months</span>
                 </div>
               </div>
 
@@ -107,7 +113,7 @@ export default function LoanRequestPage() {
           </div>
           
           <ExcelFormulaInput 
-            label="Estimated Monthly Due"
+            label="Estimated Total Interest"
             amount={amount}
             rate={interestRate}
             term={term}
