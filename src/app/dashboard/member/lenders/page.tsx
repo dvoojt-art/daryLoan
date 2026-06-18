@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search, Users, Filter } from 'lucide-react';
 import { MOCK_MEMBERS } from '@/lib/mock-data';
+import { cn } from '@/lib/utils';
 
 export default function LendersDirectoryPage() {
   const [search, setSearch] = useState('');
