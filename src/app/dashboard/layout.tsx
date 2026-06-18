@@ -14,7 +14,8 @@ import {
   LogOut,
   Menu,
   X,
-  Bell
+  Bell,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -27,9 +28,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isAdmin = pathname.includes('/admin');
 
   // Calculate notification count based on role
+  // For members, we notify on overdue or approved (upcoming) loans
   const notificationCount = isAdmin 
     ? MOCK_LOANS.filter(l => l.status === 'pending' || l.status === 'overdue').length + MOCK_MEMBERS.filter(m => m.status === 'pending').length
-    : MOCK_LOANS.filter(l => l.memberId === 'm1' && (l.status === 'overdue')).length + 1; // +1 for "Upcoming Due" logic
+    : MOCK_LOANS.filter(l => l.memberId === 'm1' && (l.status === 'overdue' || l.status === 'approved')).length;
 
   const navItems = isAdmin 
     ? [
@@ -40,6 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ]
     : [
         { name: 'My Portal', icon: LayoutDashboard, href: '/dashboard/member' },
+        { name: 'Community Lenders', icon: Users, href: '/dashboard/member/lenders' },
         { name: 'Request Loan', icon: HandCoins, href: '/dashboard/member/request' },
         { name: 'Settings', icon: Settings, href: '/dashboard/member/settings' },
       ];

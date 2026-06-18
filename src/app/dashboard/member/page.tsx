@@ -39,7 +39,8 @@ import {
   FileSpreadsheet,
   FileText,
   FileJson,
-  Plus
+  Plus,
+  AlertTriangle
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -72,14 +73,14 @@ export default function MemberDashboard() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Member Portal</h1>
+          <h1 className="text-3xl font-headline font-bold text-slate-800">Member Portal</h1>
           <p className="text-muted-foreground">Manage your savings and loan applications.</p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
             <Link href="/dashboard/member/settings">Profile Settings</Link>
           </Button>
-          <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold">
+          <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold shadow-sm">
             <Link href="/dashboard/member/request">
               <Plus className="mr-2 h-4 w-4" /> Request Loan
             </Link>
@@ -87,23 +88,34 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {/* Member Alerts */}
+      {/* Member Alerts & Notifications */}
       <div className="grid gap-4 md:grid-cols-2">
-        {overdueLoan && (
-          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Action Required: Overdue Payment</AlertTitle>
-            <AlertDescription>
-              Your loan (₱{overdueLoan.amount.toLocaleString()}) is past its due date. Please settle immediately.
+        {overdueLoan ? (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-pulse">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertTitle className="font-bold">URGENT: Overdue Payment Detected</AlertTitle>
+            <AlertDescription className="text-sm">
+              Your loan of ₱{overdueLoan.amount.toLocaleString()} for "{overdueLoan.purpose}" is past its due date. Please settle this immediately to avoid penalties.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        
+        {activeLoan && activeLoan.dueDate && (
+          <Alert className="bg-primary/5 border-primary/20 text-primary">
+            <Clock className="h-5 w-5" />
+            <AlertTitle className="font-bold">Upcoming Due Date Notification</AlertTitle>
+            <AlertDescription className="text-sm">
+              Your next payment for the ₱{activeLoan.amount.toLocaleString()} loan is due on <span className="font-bold underline">{activeLoan.dueDate}</span>.
             </AlertDescription>
           </Alert>
         )}
-        {activeLoan && activeLoan.dueDate && (
-          <Alert className="bg-accent/5 border-accent/20 text-accent-foreground">
-            <Clock className="h-4 w-4 text-accent" />
-            <AlertTitle>Payment Reminder</AlertTitle>
-            <AlertDescription>
-              Your next ₱1,245.50 payment is due on <b>{activeLoan.dueDate}</b>.
+
+        {!overdueLoan && !activeLoan && (
+          <Alert className="bg-green-50 border-green-200 text-green-700">
+            <Info className="h-5 w-5" />
+            <AlertTitle className="font-bold">Account in Good Standing</AlertTitle>
+            <AlertDescription className="text-sm">
+              You have no outstanding or overdue loans. Your contribution consistency is excellent!
             </AlertDescription>
           </Alert>
         )}
