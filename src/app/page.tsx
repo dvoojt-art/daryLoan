@@ -41,12 +41,9 @@ export default function LandingPage() {
                   Automate records, streamline collections, and make data-driven decisions with our AI-powered fintech platform.
                 </p>
               </div>
-              <div className="space-x-4">
+              <div className="flex justify-center">
                 <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
                   <Link href="/login">Access DaryLoan Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                </Button>
-                <Button variant="outline" size="lg" className="border-primary text-primary hover:bg-primary/5">
-                  Book a Demo
                 </Button>
               </div>
             </div>
