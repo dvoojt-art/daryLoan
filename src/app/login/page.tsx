@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -23,12 +22,15 @@ export default function LoginPage() {
             <div className="bg-primary p-2 rounded-lg">
               <Wallet className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-3xl font-headline">
-              <span className="font-bold text-slate-800">Dary</span>
-              <span className="text-yellow-600 font-medium">Loan</span>
-            </h1>
+            <div className="flex flex-col items-start -space-y-1">
+              <h1 className="text-3xl font-headline">
+                <span className="font-bold text-slate-800">Dary</span>
+                <span className="text-yellow-600 font-medium">Loan</span>
+              </h1>
+              <span className="text-xs text-muted-foreground font-medium italic">Problema mo'y may solusyon!</span>
+            </div>
           </Link>
-          <p className="text-muted-foreground">Secure Portal Login</p>
+          <p className="text-muted-foreground pt-2">Secure Portal Login</p>
         </div>
 
         <Card className="border-none shadow-xl">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -57,10 +56,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="h-16 flex items-center px-6 border-b">
             <Link href="/" className="flex items-center gap-2">
               <Wallet className="h-6 w-6 text-primary" />
-              <span className="font-headline text-xl">
-                <span className="font-bold text-slate-800">Dary</span>
-                <span className="text-yellow-600 font-medium">Loan</span>
-              </span>
+              <div className="flex flex-col -space-y-1">
+                <span className="font-headline text-xl">
+                  <span className="font-bold text-slate-800">Dary</span>
+                  <span className="text-yellow-600 font-medium">Loan</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium leading-none">Problema mo'y may solusyon!</span>
+              </div>
             </Link>
           </div>
 
