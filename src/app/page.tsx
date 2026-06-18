@@ -114,7 +114,7 @@ export default function LandingPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-background p-4 rounded-xl">
                       <p className="text-sm text-muted-foreground">Interest</p>
-                      <p className="text-2xl font-headline font-bold">5.0%</p>
+                      <p className="text-2xl font-headline font-bold">10%</p>
                     </div>
                     <div className="bg-background p-4 rounded-xl">
                       <p className="text-sm text-muted-foreground">Result</p>
