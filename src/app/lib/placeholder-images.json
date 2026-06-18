@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Abstract fintech background",
+      "imageUrl": "https://picsum.photos/seed/lendmate1/1200/800",
+      "imageHint": "finance technology"
+    },
+    {
+      "id": "admin-avatar",
+      "description": "Professional admin user",
+      "imageUrl": "https://picsum.photos/seed/admin/200/200",
+      "imageHint": "professional person"
+    },
+    {
+      "id": "member-avatar",
+      "description": "Community member",
+      "imageUrl": "https://picsum.photos/seed/member/200/200",
+      "imageHint": "smiling person"
+    }
+  ]
+}
