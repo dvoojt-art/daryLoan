@@ -132,10 +132,10 @@ export default function LandingPage() {
         <div className="container px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">© 2024 DaryLoan Inc. All rights reserved.</p>
           <nav className="flex gap-4 sm:gap-6">
-            <Link className="text-sm hover:underline underline-offset-4" href="#">
+            <Link className="text-sm hover:underline underline-offset-4" href="/privacy">
               Privacy
             </Link>
-            <Link className="text-sm hover:underline underline-offset-4" href="#">
+            <Link className="text-sm hover:underline underline-offset-4" href="/terms">
               Terms
             </Link>
           </nav>

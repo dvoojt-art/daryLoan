@@ -73,9 +73,11 @@ export default function LoginPage() {
               <ArrowRight className="h-5 w-5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
             </Button>
           </CardContent>
-          <CardFooter className="flex justify-center border-t pt-6">
-            <p className="text-xs text-muted-foreground text-center">
-              By logging in, you agree to our Terms of Service and Privacy Policy.
+          <CardFooter className="flex justify-center border-t pt-6 text-center">
+            <p className="text-xs text-muted-foreground max-w-[280px]">
+              By logging in, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-primary">Terms of Service</Link> and{' '}
+              <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
             </p>
           </CardFooter>
         </Card>
