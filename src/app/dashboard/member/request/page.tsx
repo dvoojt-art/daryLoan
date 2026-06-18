@@ -15,7 +15,7 @@ import { toast } from '@/hooks/use-toast';
 export default function LoanRequestPage() {
   const [amount, setAmount] = useState(5000);
   const [term, setTerm] = useState(6); // Default to 6 months
-  const interestRate = 0.10; // 10% fixed interest for demonstration
+  const interestRate = 0.10; // 10% monthly interest (periodic rate)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +145,7 @@ export default function LoanRequestPage() {
           <div className="p-4 bg-accent/5 rounded-xl border border-accent/10 flex gap-3">
             <Info className="h-5 w-5 text-accent shrink-0" />
             <p className="text-[10px] text-muted-foreground leading-relaxed">
-              Calculations are based on <b>Admin Configured Formulas</b>. Final interest rates may be adjusted during manual review.
+              Calculations are based on <b>10% Monthly Interest</b> configured by Admin. Final interest rates may be adjusted during manual review.
             </p>
           </div>
         </div>

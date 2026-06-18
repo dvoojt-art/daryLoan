@@ -20,18 +20,20 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
   const [totalInterest, setTotalInterest] = useState<number>(0);
 
   useEffect(() => {
-    // Standard Amortization Formula logic applied via JS
-    // We treat 'term' as months (e.g., 0.25 = 1 week)
-    const monthlyRate = rate / 12;
+    // We treat 'rate' as the periodic monthly rate (e.g., 0.10 for 10% monthly)
+    const periodicRate = rate;
     let pmt = 0;
     
-    if (monthlyRate === 0) {
+    if (periodicRate === 0) {
       pmt = amount / term;
     } else {
-      // PMT Formula: (rate * (1 + rate)^term) / ((1 + rate)^term - 1) * amount
-      pmt = (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1) * amount;
+      // Standard PMT (Amortization) Formula: 
+      // PMT = (r * (1+r)^n) / ((1+r)^n - 1) * Principal
+      // where r = periodic rate, n = number of periods
+      pmt = (periodicRate * Math.pow(1 + periodicRate, term)) / (Math.pow(1 + periodicRate, term) - 1) * amount;
     }
     
+    // Total payable = payment * term periods
     const totalPayable = pmt * term;
     const interest = totalPayable - amount;
 
@@ -63,7 +65,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
           </div>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             <span className="text-blue-600 font-bold">=PMT</span>
-            <span>({(rate * 100).toFixed(1)}%/12, {formatTermDisplay(term)}, -{amount.toLocaleString()})</span>
+            <span>({(rate * 100).toFixed(1)}% monthly, {formatTermDisplay(term)}, -{amount.toLocaleString()})</span>
           </div>
           <Input 
             readOnly 
