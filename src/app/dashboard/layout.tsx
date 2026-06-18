@@ -95,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Avatar>
               <div className="overflow-hidden">
                 <p className="text-sm font-semibold truncate">{isAdmin ? 'Admin Portal' : 'Member Portal'}</p>
-                <p className="text-xs text-muted-foreground truncate">{isAdmin ? 'Full Access' : 'View Only'}</p>
+                <p className="text-xs text-muted-foreground truncate">{isAdmin ? 'Full Access' : 'View and Request Only'}</p>
               </div>
             </div>
             <Button asChild variant="ghost" className="w-full justify-start text-muted-foreground hover:text-destructive">
