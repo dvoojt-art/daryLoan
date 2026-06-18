@@ -39,7 +39,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex justify-center">
-                <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
+                <Button asChild size="lg" className="bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-md">
                   <Link href="/login">Access DaryLoan Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               </div>
