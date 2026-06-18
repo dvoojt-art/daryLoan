@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { 
   CreditCard, 
   Calendar, 
   ArrowRight, 
@@ -15,13 +21,19 @@ import {
   History,
   TrendingUp,
   AlertCircle,
-  Clock
+  Clock,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  FileJson
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MemberDashboard() {
+  const { toast } = useToast();
   const memberId = 'm1';
   const myLoans = MOCK_LOANS.filter(l => l.memberId === memberId);
   const myContributions = MOCK_CONTRIBUTIONS.filter(c => c.memberId === memberId);
@@ -29,6 +41,13 @@ export default function MemberDashboard() {
   
   const activeLoan = myLoans.find(l => l.status === 'approved');
   const overdueLoan = myLoans.find(l => l.status === 'overdue');
+
+  const handleExport = (format: string) => {
+    toast({
+      title: "Export Initiated",
+      description: `Your contribution ledger is being generated in ${format} format.`,
+    });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -154,7 +173,27 @@ export default function MemberDashboard() {
               <CardTitle>Contribution Ledger</CardTitle>
               <CardDescription>Your monthly savings history.</CardDescription>
             </div>
-            <History className="h-5 w-5 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1">
+                    <Download className="h-3.5 w-3.5" /> Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('Excel')}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" /> Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('PDF')}>
+                    <FileText className="mr-2 h-4 w-4 text-red-600" /> PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('CSV')}>
+                    <FileJson className="mr-2 h-4 w-4 text-blue-600" /> CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <History className="h-5 w-5 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
             <Table>

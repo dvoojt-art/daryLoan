@@ -7,6 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import { 
   Users, 
   HandCoins, 
   TrendingUp, 
@@ -16,14 +24,20 @@ import {
   X,
   Eye,
   AlertTriangle,
-  UserPlus
+  UserPlus,
+  FileSpreadsheet,
+  FileText,
+  FileJson,
+  Download
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_MEMBERS } from '@/lib/mock-data';
 import { LoanRiskAssessment } from '@/components/LoanRiskAssessment';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboard() {
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
   const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
@@ -33,6 +47,13 @@ export default function AdminDashboard() {
 
   const getMemberName = (id: string) => MOCK_MEMBERS.find(m => m.id === id)?.name || 'Unknown';
 
+  const handleExport = (format: string) => {
+    toast({
+      title: "Export Started",
+      description: `Preparing your ${format} report for download...`,
+    });
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -40,9 +61,30 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-headline font-bold">Admin Command Center</h1>
           <p className="text-muted-foreground">Financial overview and operational controls.</p>
         </div>
-        <Button className="bg-primary">
-          Generate Report <ArrowUpRight className="ml-2 h-4 w-4" />
-        </Button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="bg-primary">
+              Generate Report <Download className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleExport('Excel')}>
+              <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+              Export to Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('PDF')}>
+              <FileText className="mr-2 h-4 w-4 text-red-600" />
+              Export to PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('CSV')}>
+              <FileJson className="mr-2 h-4 w-4 text-blue-600" />
+              Export to CSV
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Admin Alerts */}
