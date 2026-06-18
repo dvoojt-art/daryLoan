@@ -12,7 +12,6 @@ import {
   Info,
   History,
   TrendingUp,
-  AlertCircle
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -48,7 +47,7 @@ export default function MemberDashboard() {
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Contributions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-4xl font-headline font-bold text-primary">${totalContributed.toLocaleString()}</div>
+            <div className="text-4xl font-headline font-bold text-primary">₱{totalContributed.toLocaleString()}</div>
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-medium">
                 <span>Member Since 2023</span>
@@ -69,7 +68,7 @@ export default function MemberDashboard() {
             {activeLoan ? (
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
-                  <div className="text-3xl font-headline font-bold">${activeLoan.amount.toLocaleString()}</div>
+                  <div className="text-3xl font-headline font-bold">₱{activeLoan.amount.toLocaleString()}</div>
                   <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">On Track</Badge>
                 </div>
                 <div className="space-y-2 pt-2 border-t">
@@ -101,7 +100,7 @@ export default function MemberDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-relaxed">
-              Based on your contribution consistency, you are eligible for an increased credit limit of up to <b>$10,000</b>.
+              Based on your contribution consistency, you are eligible for an increased credit limit of up to <b>₱10,000</b>.
             </p>
             <Button variant="secondary" size="sm" className="w-full text-accent font-bold">
               Check Eligibility
@@ -134,7 +133,7 @@ export default function MemberDashboard() {
                   <TableRow key={c.id}>
                     <TableCell>{c.date}</TableCell>
                     <TableCell className="text-xs font-code">TXN-{c.id.toUpperCase()}</TableCell>
-                    <TableCell className="text-right font-semibold">${c.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-semibold">₱{c.amount.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -176,7 +175,7 @@ export default function MemberDashboard() {
                         {l.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">${l.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-semibold">₱{l.amount.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

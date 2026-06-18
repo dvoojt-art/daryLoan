@@ -118,7 +118,7 @@ export default function LandingPage() {
                     </div>
                     <div className="bg-background p-4 rounded-xl">
                       <p className="text-sm text-muted-foreground">Result</p>
-                      <p className="text-2xl font-headline font-bold text-accent">$1,245.50</p>
+                      <p className="text-2xl font-headline font-bold text-accent">₱1,245.50</p>
                     </div>
                   </div>
                 </div>

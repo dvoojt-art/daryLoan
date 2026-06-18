@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -50,8 +49,8 @@ export default function LoanRequestPage() {
             <CardContent className="space-y-8">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label>Requested Amount ($)</Label>
-                  <span className="text-lg font-headline font-bold text-primary">${amount.toLocaleString()}</span>
+                  <Label>Requested Amount (₱)</Label>
+                  <span className="text-lg font-headline font-bold text-primary">₱{amount.toLocaleString()}</span>
                 </div>
                 <Slider 
                   value={[amount]} 
@@ -61,8 +60,8 @@ export default function LoanRequestPage() {
                   step={500} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Min: $500</span>
-                  <span>Max: $20,000</span>
+                  <span>Min: ₱500</span>
+                  <span>Max: ₱20,000</span>
                 </div>
               </div>
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -43,7 +42,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, onChange }: Excel
       <div className="mt-2">
         <Input 
           readOnly 
-          value={`$${monthlyPayment.toLocaleString()} / month`}
+          value={`₱${monthlyPayment.toLocaleString()} / month`}
           className="font-code text-lg text-primary bg-white"
         />
       </div>

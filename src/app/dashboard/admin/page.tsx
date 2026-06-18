@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -58,7 +57,7 @@ export default function AdminDashboard() {
             <HandCoins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalDisbursed.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₱{totalDisbursed.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Across all approved loans</p>
           </CardContent>
         </Card>
@@ -68,7 +67,7 @@ export default function AdminDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalOutstanding.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₱{totalOutstanding.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Estimated current collection pool</p>
           </CardContent>
         </Card>
@@ -105,7 +104,7 @@ export default function AdminDashboard() {
                 {pendingLoans.map((loan) => (
                   <TableRow key={loan.id} className={selectedLoanId === loan.id ? 'bg-primary/5' : ''}>
                     <TableCell className="font-medium">{getMemberName(loan.memberId)}</TableCell>
-                    <TableCell>${loan.amount.toLocaleString()}</TableCell>
+                    <TableCell>₱{loan.amount.toLocaleString()}</TableCell>
                     <TableCell>{loan.requestDate}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button 
