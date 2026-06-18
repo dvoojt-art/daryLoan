@@ -46,7 +46,7 @@ export default function LandingPage() {
               </div>
               <div className="space-x-4">
                 <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
-                  <Link href="/login">Launch Dashboard <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  <Link href="/login">Access DaryLoan Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
                 <Button variant="outline" size="lg" className="border-primary text-primary hover:bg-primary/5">
                   Book a Demo
