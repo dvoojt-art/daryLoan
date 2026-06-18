@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex flex-col -space-y-1">
                 <span className="font-headline text-xl">
                   <span className="font-bold text-slate-800">Dary</span>
-                  <span className="text-yellow-600 font-medium">Loan</span>
+                  <span className="text-accent font-medium">Loan</span>
                 </span>
                 <span className="text-[10px] text-muted-foreground font-medium leading-none">Problema mo'y may solusyon!</span>
               </div>

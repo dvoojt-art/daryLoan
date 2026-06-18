@@ -25,7 +25,7 @@ export default function LoginPage() {
             <div className="flex flex-col items-start -space-y-1">
               <h1 className="text-3xl font-headline">
                 <span className="font-bold text-slate-800">Dary</span>
-                <span className="text-yellow-600 font-medium">Loan</span>
+                <span className="text-accent font-medium">Loan</span>
               </h1>
               <span className="text-xs text-muted-foreground font-medium italic">Problema mo'y may solusyon!</span>
             </div>

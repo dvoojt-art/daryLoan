@@ -12,7 +12,7 @@ export default function LandingPage() {
           <div className="flex flex-col -space-y-1">
             <span className="font-headline text-xl tracking-tighter">
               <span className="font-bold text-slate-800">Dary</span>
-              <span className="text-yellow-600 font-medium">Loan</span>
+              <span className="text-accent font-medium">Loan</span>
             </span>
             <span className="text-[10px] text-muted-foreground font-medium leading-none">Problema mo'y may solusyon!</span>
           </div>
@@ -32,14 +32,14 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                   Smart Loan Management <br />
-                  <span className="text-yellow-600">For Community Growth</span>
+                  <span className="text-accent">For Community Growth</span>
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl font-body">
                   Automate records, streamline collections, and make data-driven decisions with our AI-powered fintech platform.
                 </p>
               </div>
               <div className="flex justify-center">
-                <Button asChild size="lg" className="bg-yellow-600 hover:bg-yellow-700 text-white border-none shadow-md">
+                <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-white border-none shadow-md">
                   <Link href="/login">Access DaryLoan Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               </div>
