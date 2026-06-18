@@ -10,12 +10,13 @@ import { Slider } from '@/components/ui/slider';
 import { ExcelFormulaInput } from '@/components/ExcelFormulaInput';
 import { ShieldCheck, ArrowLeft, Info, FunctionSquare } from 'lucide-react';
 import Link from 'next/link';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoanRequestPage() {
   const [amount, setAmount] = useState(5000);
-  const [term, setTerm] = useState(6); // Default to 6 months
+  const [term, setTerm] = useState(1); // Default to 1 month
   const interestRate = 0.10; // 10% monthly interest (periodic rate)
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,12 +81,12 @@ export default function LoanRequestPage() {
                   value={[term]} 
                   onValueChange={(v) => setTerm(v[0])} 
                   min={0.25} 
-                  max={11} 
+                  max={3} 
                   step={0.25} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Min: 7 Days</span>
-                  <span>Max: 11 Months</span>
+                  <span>Max: 3 Months</span>
                 </div>
               </div>
 
