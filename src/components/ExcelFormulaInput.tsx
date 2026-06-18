@@ -16,11 +16,11 @@ interface ExcelFormulaInputProps {
 }
 
 export function ExcelFormulaInput({ label, amount, rate, term, className, onChange }: ExcelFormulaInputProps) {
-  const [monthlyPayment, setMonthlyPayment] = useState<number>(0);
+  const [totalPayable, setTotalPayable] = useState<number>(0);
   const [totalInterest, setTotalInterest] = useState<number>(0);
 
   useEffect(() => {
-    // New Logic: Simple interest of 10% per month
+    // Logic: Simple interest of 10% per month
     // 1 month = 10%, 2 months = 20%, 3 months = 30%
     const monthlyRate = rate; // 0.10 (10%)
     
@@ -28,15 +28,12 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
     const interest = amount * (monthlyRate * term);
     
     // Total Payable = Principal + Total Interest
-    const totalPayable = amount + interest;
-    
-    // Periodic payment (e.g. per month)
-    const pmt = totalPayable / term;
+    const total = amount + interest;
 
-    setMonthlyPayment(parseFloat(pmt.toFixed(2)));
+    setTotalPayable(parseFloat(total.toFixed(2)));
     setTotalInterest(parseFloat(interest.toFixed(2)));
     
-    if (onChange) onChange(pmt);
+    if (onChange) onChange(total);
   }, [amount, rate, term, onChange]);
 
   const formatTermDisplay = (t: number) => {
@@ -61,15 +58,15 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
           </div>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             <span className="text-blue-600 font-bold">=AMOUNT</span>
-            <span> * (1 + ({(rate * 100).toFixed(0)}% * {formatTermDisplay(term)})) / {term}</span>
+            <span> * (1 + ({(rate * 100).toFixed(0)}% * {formatTermDisplay(term)}))</span>
           </div>
           <Input 
             readOnly 
-            value={`₱${monthlyPayment.toLocaleString()}`}
+            value={`₱${totalPayable.toLocaleString()}`}
             className="font-headline font-bold text-xl text-primary bg-white h-12 border-slate-200"
           />
           <p className="text-[10px] text-muted-foreground px-1 italic">
-            * Payment includes principal + {(term * 10).toFixed(0)}% cumulative interest
+            * Result includes principal + {(term * 10).toFixed(0)}% cumulative interest
           </p>
         </div>
 
