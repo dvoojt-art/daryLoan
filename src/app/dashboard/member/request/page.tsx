@@ -62,12 +62,12 @@ export default function LoanRequestPage() {
                   value={[amount]} 
                   onValueChange={(v) => setAmount(v[0])} 
                   min={500} 
-                  max={20000} 
+                  max={30000} 
                   step={500} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Min: ₱500</span>
-                  <span>Max: ₱20,000</span>
+                  <span>Max: ₱30,000</span>
                 </div>
               </div>
 
