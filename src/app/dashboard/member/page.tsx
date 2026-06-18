@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   CreditCard, 
   Calendar, 
@@ -12,6 +14,8 @@ import {
   Info,
   History,
   TrendingUp,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -24,6 +28,7 @@ export default function MemberDashboard() {
   const totalContributed = myContributions.reduce((acc, c) => acc + c.amount, 0);
   
   const activeLoan = myLoans.find(l => l.status === 'approved');
+  const overdueLoan = myLoans.find(l => l.status === 'overdue');
 
   return (
     <div className="p-6 space-y-6">
@@ -35,6 +40,28 @@ export default function MemberDashboard() {
         <Button asChild className="bg-accent hover:bg-accent/90">
           <Link href="/dashboard/member/request">Apply for Loan <ArrowRight className="ml-2 h-4 w-4" /></Link>
         </Button>
+      </div>
+
+      {/* Member Alerts */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {overdueLoan && (
+          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Missed Payment Alert</AlertTitle>
+            <AlertDescription>
+              Your loan of ₱{overdueLoan.amount.toLocaleString()} is currently overdue. Please settle it to avoid penalties.
+            </AlertDescription>
+          </Alert>
+        )}
+        {activeLoan && activeLoan.dueDate && (
+          <Alert className="bg-accent/5 border-accent/20 text-accent-foreground">
+            <Clock className="h-4 w-4 text-accent" />
+            <AlertTitle>Upcoming Due Date</AlertTitle>
+            <AlertDescription>
+              Your next payment for your ₱{activeLoan.amount.toLocaleString()} loan is due on <b>{activeLoan.dueDate}</b>.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -74,12 +101,22 @@ export default function MemberDashboard() {
                 <div className="space-y-2 pt-2 border-t">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Next Payment</span>
-                    <span className="font-semibold">Apr 15, 2024</span>
+                    <span className="font-semibold">{activeLoan.dueDate || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Term Remaining</span>
                     <span className="font-semibold">8 / 12 Months</span>
                   </div>
+                </div>
+              </div>
+            ) : overdueLoan ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <div className="text-3xl font-headline font-bold">₱{overdueLoan.amount.toLocaleString()}</div>
+                  <Badge variant="destructive">Overdue</Badge>
+                </div>
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs text-destructive font-medium">Action required: Contact support immediately.</p>
                 </div>
               </div>
             ) : (
@@ -169,7 +206,8 @@ export default function MemberDashboard() {
                         className={cn(
                           l.status === 'approved' && "bg-green-50 text-green-700 border-green-200",
                           l.status === 'pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
-                          l.status === 'rejected' && "bg-red-50 text-red-700 border-red-200"
+                          l.status === 'rejected' && "bg-red-50 text-red-700 border-red-200",
+                          l.status === 'overdue' && "bg-red-50 text-red-700 border-red-200"
                         )}
                       >
                         {l.status}

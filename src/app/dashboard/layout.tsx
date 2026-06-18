@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -18,11 +19,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MOCK_LOANS, MOCK_MEMBERS } from '@/lib/mock-data';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const isAdmin = pathname.includes('/admin');
+
+  // Calculate notification count based on role
+  const notificationCount = isAdmin 
+    ? MOCK_LOANS.filter(l => l.status === 'pending' || l.status === 'overdue').length + MOCK_MEMBERS.filter(m => m.status === 'pending').length
+    : MOCK_LOANS.filter(l => l.memberId === 'm1' && (l.status === 'overdue')).length + 1; // +1 for "Upcoming Due" logic
 
   const navItems = isAdmin 
     ? [
@@ -118,7 +125,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="ml-auto flex items-center gap-4">
             <Button variant="ghost" size="icon" className="text-muted-foreground relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-accent rounded-full border-2 border-white" />
+              {notificationCount > 0 && (
+                <span className="absolute top-2 right-2 h-4 w-4 bg-destructive text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                  {notificationCount}
+                </span>
+              )}
             </Button>
             <div className="h-8 w-px bg-border mx-2" />
             <div className="hidden sm:block text-right">

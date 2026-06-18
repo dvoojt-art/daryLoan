@@ -1,9 +1,11 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Users, 
   HandCoins, 
@@ -12,7 +14,9 @@ import {
   ArrowUpRight, 
   Check, 
   X,
-  Eye
+  Eye,
+  AlertTriangle,
+  UserPlus
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_MEMBERS } from '@/lib/mock-data';
 import { LoanRiskAssessment } from '@/components/LoanRiskAssessment';
@@ -22,7 +26,9 @@ export default function AdminDashboard() {
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
 
   const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
-  const totalDisbursed = MOCK_LOANS.filter(l => l.status === 'approved').reduce((acc, l) => acc + l.amount, 0);
+  const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
+  const newApplications = MOCK_MEMBERS.filter(m => m.status === 'pending');
+  const totalDisbursed = MOCK_LOANS.filter(l => l.status === 'approved' || l.status === 'overdue').reduce((acc, l) => acc + l.amount, 0);
   const totalOutstanding = totalDisbursed * 0.85; // Mock logic
 
   const getMemberName = (id: string) => MOCK_MEMBERS.find(m => m.id === id)?.name || 'Unknown';
@@ -39,6 +45,28 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
+      {/* Admin Alerts */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {overdueLoans.length > 0 && (
+          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Overdue Loans Detected</AlertTitle>
+            <AlertDescription>
+              There are {overdueLoans.length} loans currently past their due date. Immediate follow-up required.
+            </AlertDescription>
+          </Alert>
+        )}
+        {newApplications.length > 0 && (
+          <Alert className="bg-primary/5 border-primary/20 text-primary">
+            <UserPlus className="h-4 w-4" />
+            <AlertTitle>New Membership Applications</AlertTitle>
+            <AlertDescription>
+              {newApplications.length} new members are awaiting registration approval.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-none shadow-sm">
@@ -47,8 +75,8 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{MOCK_MEMBERS.length}</div>
-            <p className="text-xs text-muted-foreground">+2 since last month</p>
+            <div className="text-2xl font-bold">{MOCK_MEMBERS.filter(m => m.status === 'active').length}</div>
+            <p className="text-xs text-muted-foreground">+{newApplications.length} pending</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm">
