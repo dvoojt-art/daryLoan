@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -77,9 +76,6 @@ export default function MemberDashboard() {
           <p className="text-muted-foreground">Manage your savings and loan applications.</p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/dashboard/member/settings">Profile Settings</Link>
-          </Button>
           <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold shadow-sm">
             <Link href="/dashboard/member/request">
               <Plus className="mr-2 h-4 w-4" /> Request Loan

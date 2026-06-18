@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -44,7 +43,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'My Portal', icon: LayoutDashboard, href: '/dashboard/member' },
         { name: 'Community Lenders', icon: Users, href: '/dashboard/member/lenders' },
         { name: 'Request Loan', icon: HandCoins, href: '/dashboard/member/request' },
-        { name: 'Settings', icon: Settings, href: '/dashboard/member/settings' },
       ];
 
   return (
