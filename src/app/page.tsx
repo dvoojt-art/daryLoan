@@ -21,9 +21,6 @@ export default function LandingPage() {
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="#features">
             Features
           </Link>
-          <Link className="text-sm font-medium hover:text-primary transition-colors" href="/login">
-            Login
-          </Link>
         </nav>
       </header>
 
