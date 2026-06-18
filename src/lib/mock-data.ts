@@ -7,6 +7,8 @@ export type Member = {
   totalContributions: number;
   joinDate: string;
   status: 'active' | 'pending';
+  shares: number;
+  profit: number;
 };
 
 export type Loan = {
@@ -29,11 +31,11 @@ export type Contribution = {
 };
 
 export const MOCK_MEMBERS: Member[] = [
-  { id: 'm1', name: 'John Doe', email: 'john@example.com', role: 'member', totalContributions: 5000, joinDate: '2023-01-15', status: 'active' },
-  { id: 'm2', name: 'Jane Smith', email: 'jane@example.com', role: 'member', totalContributions: 12000, joinDate: '2022-06-20', status: 'active' },
-  { id: 'm3', name: 'Bob Wilson', email: 'bob@example.com', role: 'member', totalContributions: 3500, joinDate: '2023-11-02', status: 'active' },
-  { id: 'm4', name: 'Alice Guo', email: 'alice@example.com', role: 'member', totalContributions: 0, joinDate: '2024-03-10', status: 'pending' },
-  { id: 'a1', name: 'Admin User', email: 'admin@daryloan.com', role: 'admin', totalContributions: 0, joinDate: '2021-01-01', status: 'active' },
+  { id: 'm1', name: 'John Doe', email: 'john@example.com', role: 'member', totalContributions: 5000, joinDate: '2023-01-15', status: 'active', shares: 1200, profit: 450.50 },
+  { id: 'm2', name: 'Jane Smith', email: 'jane@example.com', role: 'member', totalContributions: 12000, joinDate: '2022-06-20', status: 'active', shares: 2500, profit: 890.75 },
+  { id: 'm3', name: 'Bob Wilson', email: 'bob@example.com', role: 'member', totalContributions: 3500, joinDate: '2023-11-02', status: 'active', shares: 800, profit: 120.00 },
+  { id: 'm4', name: 'Alice Guo', email: 'alice@example.com', role: 'member', totalContributions: 0, joinDate: '2024-03-10', status: 'pending', shares: 0, profit: 0 },
+  { id: 'a1', name: 'Admin User', email: 'admin@daryloan.com', role: 'admin', totalContributions: 0, joinDate: '2021-01-01', status: 'active', shares: 0, profit: 0 },
 ];
 
 export const MOCK_LOANS: Loan[] = [
