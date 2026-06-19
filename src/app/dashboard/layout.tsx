@@ -192,8 +192,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b lg:bg-transparent lg:border-none">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+        <header className="h-16 flex items-center justify-between px-6 bg-[#010642] border-b border-white/10">
+          <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/5" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
           
@@ -201,10 +201,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {mounted && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground relative">
+                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-white/5 relative">
                     <Bell className="h-5 w-5" />
                     {notificationCount > 0 && (
-                      <span className="absolute top-2 right-2 h-4 w-4 bg-destructive text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                      <span className="absolute top-2 right-2 h-4 w-4 bg-destructive text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#010642]">
                         {notificationCount}
                       </span>
                     )}
@@ -293,9 +293,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Popover>
             )}
             
-            <div className="h-8 w-px bg-border mx-2" />
+            <div className="h-8 w-px bg-white/10 mx-2" />
             <div className="hidden sm:block text-right">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wider">{isAdmin ? 'Admin Session' : 'Member Session'}</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider">{isAdmin ? 'Admin Session' : 'Member Session'}</p>
             </div>
           </div>
         </header>
