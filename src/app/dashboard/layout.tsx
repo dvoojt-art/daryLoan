@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -32,6 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const pathname = usePathname();
   const isAdmin = pathname.includes('/admin');
 
@@ -44,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const myOverdue = MOCK_LOANS.filter(l => l.memberId === myMemberId && l.status === 'overdue');
   const myApproved = MOCK_LOANS.filter(l => l.memberId === myMemberId && l.status === 'approved');
 
-  const adminNotifications = [
+  const adminNotifications = useMemo(() => [
     ...pendingLoans.map(l => ({ 
       id: `pl-${l.id}`, 
       title: 'Approval Required', 
@@ -69,9 +70,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/dashboard/admin/members',
       category: 'approval'
     })),
-  ];
+  ], [pendingLoans, overdueLoans, pendingMembers]);
 
-  const memberNotifications = [
+  const memberNotifications = useMemo(() => [
     ...myOverdue.map(l => ({ 
       id: `mol-${l.id}`, 
       title: 'Urgent: Overdue Payment', 
@@ -88,10 +89,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/dashboard/member',
       category: 'approval'
     })),
-  ];
+  ], [myOverdue, myApproved]);
 
-  const notifications = isAdmin ? adminNotifications : memberNotifications;
-  const notificationCount = notifications.length;
+  const allNotifications = isAdmin ? adminNotifications : memberNotifications;
+  const activeNotifications = allNotifications.filter(n => !dismissedIds.has(n.id));
+  const notificationCount = activeNotifications.length;
+
+  const handleDismiss = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDismissedIds(prev => new Set(prev).add(id));
+  };
+
+  const handleClearAll = () => {
+    setDismissedIds(new Set(allNotifications.map(n => n.id)));
+  };
 
   const navItems = isAdmin 
     ? [
@@ -204,35 +216,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </p>
                 </div>
                 <ScrollArea className="h-[350px]">
-                  {notifications.length > 0 ? (
+                  {activeNotifications.length > 0 ? (
                     <div className="flex flex-col">
-                      {notifications.map((n) => (
-                        <Link 
-                          key={n.id} 
-                          href={n.href}
-                          className="flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors border-b last:border-0"
-                        >
-                          <div className={cn(
-                            "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
-                            n.category === 'due' 
-                              ? "bg-red-50 text-red-600 border-red-100" 
-                              : "bg-blue-50 text-blue-600 border-blue-100"
-                          )}>
-                            <n.icon className="h-4 w-4" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-bold leading-none">{n.title}</p>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">{n.description}</p>
-                            <div className="pt-1">
-                              <span className={cn(
-                                "text-[9px] uppercase font-bold px-1.5 py-0.5 rounded",
-                                n.category === 'due' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                              )}>
-                                {n.category}
-                              </span>
+                      {activeNotifications.map((n) => (
+                        <div key={n.id} className="relative group/notify">
+                          <Link 
+                            href={n.href}
+                            className="flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors border-b last:border-0 pr-10"
+                          >
+                            <div className={cn(
+                              "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
+                              n.category === 'due' 
+                                ? "bg-red-50 text-red-600 border-red-100" 
+                                : "bg-blue-50 text-blue-600 border-blue-100"
+                            )}>
+                              <n.icon className="h-4 w-4" />
                             </div>
-                          </div>
-                        </Link>
+                            <div className="space-y-1">
+                              <p className="text-xs font-bold leading-none">{n.title}</p>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">{n.description}</p>
+                              <div className="pt-1">
+                                <span className={cn(
+                                  "text-[9px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                  n.category === 'due' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                )}>
+                                  {n.category}
+                                </span>
+                              </div>
+                            </div>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-4 h-6 w-6 opacity-0 group-hover/notify:opacity-100 transition-opacity hover:bg-slate-200"
+                            onClick={(e) => handleDismiss(n.id, e)}
+                          >
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -244,10 +265,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                   )}
                 </ScrollArea>
-                {notifications.length > 0 && (
-                  <div className="p-2 bg-slate-50/50 border-t">
-                    <Button variant="ghost" size="sm" className="w-full text-[11px] font-bold text-primary hover:bg-primary/5">
-                      Mark All as Read
+                {activeNotifications.length > 0 && (
+                  <div className="p-2 bg-slate-50/50 border-t flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-1 text-[11px] font-bold text-slate-500 hover:bg-slate-100"
+                      onClick={handleClearAll}
+                    >
+                      Clear All
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-1 text-[11px] font-bold text-primary hover:bg-primary/5"
+                      asChild
+                    >
+                      <Link href={isAdmin ? "/dashboard/admin/ledger" : "/dashboard/member"}>
+                        View All
+                      </Link>
                     </Button>
                   </div>
                 )}
