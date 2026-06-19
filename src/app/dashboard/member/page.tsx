@@ -407,7 +407,7 @@ export default function MemberDashboard() {
               <TableBody>
                 {myContributions.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell>{c.date}</TableCell>
+                    <TableCell>{formatDate(c.date)}</TableCell>
                     <TableCell className="font-mono text-[10px] text-muted-foreground tracking-tighter uppercase">DARY-{c.id}</TableCell>
                     <TableCell className="text-right font-bold text-primary">₱{c.amount.toLocaleString()}</TableCell>
                   </TableRow>
