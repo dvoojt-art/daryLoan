@@ -159,14 +159,14 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="w-full py-6 border-t bg-white">
+      <footer className="w-full py-6 bg-[#010642]">
         <div className="container px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">© 2024 DaryLoan Inc. All rights reserved.</p>
+          <p className="text-sm text-slate-400">© 2024 DaryLoan Inc. All rights reserved.</p>
           <nav className="flex gap-4 sm:gap-6">
-            <Link className="text-sm hover:underline underline-offset-4" href="/privacy">
+            <Link className="text-sm text-slate-400 hover:text-white hover:underline underline-offset-4 transition-colors" href="/privacy">
               Privacy
             </Link>
-            <Link className="text-sm hover:underline underline-offset-4" href="/terms">
+            <Link className="text-sm text-slate-400 hover:text-white hover:underline underline-offset-4 transition-colors" href="/terms">
               Terms
             </Link>
           </nav>
