@@ -6,22 +6,22 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
-      <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-[#010642] sticky top-0 z-50 shadow-sm">
         <Link className="flex items-center justify-center gap-2" href="#">
-          <Wallet className="h-6 w-6 text-primary" />
+          <Wallet className="h-6 w-6 text-accent" />
           <div className="flex flex-col -space-y-1">
             <span className="font-headline text-xl tracking-tighter">
-              <span className="font-bold text-slate-800">Dary</span>
+              <span className="font-bold text-white">Dary</span>
               <span className="text-accent font-medium">Loan</span>
             </span>
-            <span className="text-[10px] text-muted-foreground font-medium leading-none">Problema mo'y may solusyon!</span>
+            <span className="text-[10px] text-slate-300 font-medium leading-none">Problema mo'y may solusyon!</span>
           </div>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-sm font-medium hover:text-primary transition-colors" href="#features">
+          <Link className="text-sm font-medium text-slate-200 hover:text-white transition-colors" href="#features">
             Features
           </Link>
-          <Link className="text-sm font-medium hover:text-primary transition-colors" href="/login">
+          <Link className="text-sm font-medium text-slate-200 hover:text-white transition-colors" href="/login">
             Admin Portal
           </Link>
         </nav>
