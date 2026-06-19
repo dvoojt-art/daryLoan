@@ -42,7 +42,8 @@ import {
   Edit,
   Trash2,
   Plus,
-  MessageSquareText
+  MessageSquareText,
+  AlertCircle
 } from 'lucide-react';
 import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -82,12 +83,32 @@ export default function AdminLedgerPage() {
     return `${month}-${day}-${year}`;
   };
 
+  // Helper to calculate total with penalties
+  const calculateTotalWithPenalties = (amount: number, termMonths: number, month1: string, month2: string, month3: string) => {
+    const interestPerMonth = amount * 0.10;
+    const baseTotal = amount + (interestPerMonth * termMonths);
+    
+    let lateCount = 0;
+    if (month1 === 'late') lateCount++;
+    if (month2 === 'late') lateCount++;
+    if (month3 === 'late') lateCount++;
+    
+    // Add 10% penalty from total payable for each late month
+    const penalty = baseTotal * (0.10 * lateCount);
+    return baseTotal + penalty;
+  };
+
   // Initial data setup
   const initialLedgerData = useMemo(() => {
     return MOCK_LOANS.map(loan => {
       const member = MOCK_MEMBERS.find(m => m.id === loan.memberId);
       const interest = loan.amount * 0.10; // 10% interest rule
-      const total = loan.amount + (interest * loan.termMonths);
+      
+      const month1 = loan.status === 'approved' || loan.status === 'repaid' ? 'paid' : 'pending';
+      const month2 = loan.status === 'repaid' ? 'paid' : loan.status === 'overdue' ? 'late' : 'pending';
+      const month3 = loan.status === 'repaid' ? 'paid' : 'pending';
+      
+      const total = calculateTotalWithPenalties(loan.amount, loan.termMonths, month1, month2, month3);
       
       return {
         ...loan,
@@ -95,9 +116,9 @@ export default function AdminLedgerPage() {
         memberEmail: member?.email || '',
         interest,
         total,
-        month1: loan.status === 'approved' || loan.status === 'repaid' ? 'paid' : 'pending',
-        month2: loan.status === 'repaid' ? 'paid' : loan.status === 'overdue' ? 'late' : 'pending',
-        month3: loan.status === 'repaid' ? 'paid' : 'pending',
+        month1,
+        month2,
+        month3,
       };
     }).sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
   }, []);
@@ -105,7 +126,28 @@ export default function AdminLedgerPage() {
   const [ledgerData, setLedgerData] = useState(initialLedgerData);
 
   const handleStatusChange = (id: string, month: 'month1' | 'month2' | 'month3', newStatus: string) => {
-    setLedgerData(prev => prev.map(item => item.id === id ? { ...item, [month]: newStatus } : item));
+    setLedgerData(prev => prev.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, [month]: newStatus };
+        const newTotal = calculateTotalWithPenalties(
+          updatedItem.amount, 
+          updatedItem.termMonths, 
+          updatedItem.month1, 
+          updatedItem.month2, 
+          updatedItem.month3
+        );
+        
+        if (newStatus === 'late') {
+          toast({
+            title: "Penalty Applied",
+            description: "A 10% late penalty has been added to the total payable.",
+          });
+        }
+        
+        return { ...updatedItem, total: newTotal };
+      }
+      return item;
+    }));
   };
 
   const handleEdit = (record: any) => {
@@ -143,10 +185,10 @@ export default function AdminLedgerPage() {
     const amountNum = parseFloat(newRecord.amount);
     const termNum = parseInt(newRecord.termMonths);
     const interest = amountNum * 0.10;
-    const total = amountNum + (interest * termNum);
 
     setLedgerData(prev => prev.map(item => {
       if (item.id === editingRecord.id) {
+        const total = calculateTotalWithPenalties(amountNum, termNum, item.month1, item.month2, item.month3);
         return {
           ...item,
           loanerName: newRecord.loanerName,
@@ -182,7 +224,7 @@ export default function AdminLedgerPage() {
     const amountNum = parseFloat(newRecord.amount);
     const termNum = parseInt(newRecord.termMonths);
     const interest = amountNum * 0.10;
-    const total = amountNum + (interest * termNum);
+    const total = calculateTotalWithPenalties(amountNum, termNum, 'pending', 'pending', 'pending');
 
     const newEntry = {
       id: `l-new-${Date.now()}`,
@@ -407,73 +449,90 @@ export default function AdminLedgerPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLedger.map((tx) => (
-                <TableRow key={tx.id} className="hover:bg-slate-50 transition-colors border-b">
-                  <TableCell className="py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9 border border-slate-200">
-                        <AvatarImage src={`https://picsum.photos/seed/${tx.memberId}/100/100`} />
-                        <AvatarFallback>{tx.memberName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
-                          {tx.adminNote && (
-                            <Badge variant="ghost" className="h-3.5 px-1 bg-slate-100 text-[8px] text-slate-500 font-bold border-none">
-                              <MessageSquareText className="h-2 w-2 mr-1" /> NOTE
-                            </Badge>
+              {filteredLedger.map((tx) => {
+                // Check if any month is late to show a penalty warning
+                const isLate = tx.month1 === 'late' || tx.month2 === 'late' || tx.month3 === 'late';
+                const baseInterest = tx.amount * 0.10;
+                const baseTotal = tx.amount + (baseInterest * tx.termMonths);
+                const hasPenalty = tx.total > baseTotal;
+
+                return (
+                  <TableRow key={tx.id} className="hover:bg-slate-50 transition-colors border-b">
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 border border-slate-200">
+                          <AvatarImage src={`https://picsum.photos/seed/${tx.memberId}/100/100`} />
+                          <AvatarFallback>{tx.memberName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                            {tx.adminNote && (
+                              <Badge variant="ghost" className="h-3.5 px-1 bg-slate-100 text-[8px] text-slate-500 font-bold border-none">
+                                <MessageSquareText className="h-2 w-2 mr-1" /> NOTE
+                              </Badge>
+                            )}
+                          </div>
+                          {tx.loanerName && (
+                            <span className="text-xs text-primary italic font-medium">Loaner: {tx.loanerName}</span>
                           )}
                         </div>
-                        {tx.loanerName && tx.loanerName !== tx.memberName && (
-                          <span className="text-xs text-primary italic font-medium">Loaner: {tx.loanerName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs font-medium text-slate-600">
+                      {formatDate(tx.requestDate)}
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-800">
+                      ₱{tx.amount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-primary font-semibold text-xs">
+                      ₱{tx.interest.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="relative">
+                      <div className="flex flex-col">
+                        <span className={cn("font-bold", hasPenalty ? "text-destructive" : "text-primary")}>
+                          ₱{tx.total.toLocaleString()}
+                        </span>
+                        {hasPenalty && (
+                          <span className="text-[9px] font-bold text-destructive uppercase flex items-center gap-1">
+                            <AlertCircle className="h-2 w-2" /> Late Penalties Applied
+                          </span>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs font-medium text-slate-600">
-                    {formatDate(tx.requestDate)}
-                  </TableCell>
-                  <TableCell className="font-bold text-slate-800">
-                    ₱{tx.amount.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-primary font-semibold text-xs">
-                    ₱{tx.interest.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="font-bold text-primary">
-                    ₱{tx.total.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <StatusDropdown id={tx.id} month="month1" currentStatus={tx.month1} />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <StatusDropdown id={tx.id} month="month2" currentStatus={tx.month2} />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
-                        onClick={() => handleEdit(tx)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
-                        onClick={() => handleDelete(tx.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <StatusDropdown id={tx.id} month="month1" currentStatus={tx.month1} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <StatusDropdown id={tx.id} month="month2" currentStatus={tx.month2} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
+                          onClick={() => handleEdit(tx)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
+                          onClick={() => handleDelete(tx.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
             <TableFooter className="bg-slate-50/50 font-bold border-t-2">
               <TableRow>
