@@ -61,7 +61,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          <div className="h-16 flex items-center px-6 border-b border-white/10">
+          <div className="h-16 flex items-center px-6 border-b border-white/10 bg-[#010642]">
             <Link href="/" className="flex items-center gap-2">
               <Wallet className="h-6 w-6 text-accent" />
               <div className="flex flex-col -space-y-1">
@@ -74,7 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
 
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto bg-[#010642]">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -95,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             })}
           </nav>
 
-          <div className="p-4 border-t border-white/10 space-y-4">
+          <div className="p-4 border-t border-white/10 space-y-4 bg-[#010642]">
             <div className="flex items-center gap-3 px-3">
               <Avatar className="h-9 w-9 border border-white/10">
                 <AvatarImage src={`https://picsum.photos/seed/${isAdmin ? 'admin' : 'member'}/100/100`} />
