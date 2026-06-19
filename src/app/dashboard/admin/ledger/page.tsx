@@ -56,6 +56,7 @@ export default function AdminLedgerPage() {
   // Form State for new/edit record
   const [newRecord, setNewRecord] = useState({
     memberId: '',
+    loanerName: '',
     amount: '',
     purpose: '',
     termMonths: '3',
@@ -108,6 +109,7 @@ export default function AdminLedgerPage() {
     setEditingRecord(record);
     setNewRecord({
       memberId: record.memberId,
+      loanerName: record.loanerName || '',
       amount: record.amount.toString(),
       purpose: record.purpose,
       termMonths: record.termMonths.toString(),
@@ -125,7 +127,7 @@ export default function AdminLedgerPage() {
   };
 
   const handleSaveEdit = () => {
-    if (!newRecord.amount || !newRecord.purpose) {
+    if (!newRecord.amount || !newRecord.purpose || !newRecord.loanerName) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -143,6 +145,7 @@ export default function AdminLedgerPage() {
       if (item.id === editingRecord.id) {
         return {
           ...item,
+          loanerName: newRecord.loanerName,
           amount: amountNum,
           purpose: newRecord.purpose,
           termMonths: termNum,
@@ -161,7 +164,7 @@ export default function AdminLedgerPage() {
   };
 
   const handleAddRecord = () => {
-    if (!newRecord.memberId || !newRecord.amount || !newRecord.purpose) {
+    if (!newRecord.memberId || !newRecord.amount || !newRecord.purpose || !newRecord.loanerName) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
@@ -179,6 +182,7 @@ export default function AdminLedgerPage() {
     const newEntry = {
       id: `l-new-${Date.now()}`,
       memberId: newRecord.memberId,
+      loanerName: newRecord.loanerName,
       amount: amountNum,
       status: 'approved' as const,
       requestDate: new Date().toISOString().split('T')[0],
@@ -196,7 +200,7 @@ export default function AdminLedgerPage() {
 
     setLedgerData(prev => [newEntry, ...prev]);
     setIsAddDialogOpen(false);
-    setNewRecord({ memberId: '', amount: '', purpose: '', termMonths: '3' });
+    setNewRecord({ memberId: '', loanerName: '', amount: '', purpose: '', termMonths: '3' });
     
     toast({
       title: "Record Added",
@@ -206,6 +210,7 @@ export default function AdminLedgerPage() {
 
   const filteredLedger = ledgerData.filter(tx => 
     tx.memberName.toLowerCase().includes(search.toLowerCase()) ||
+    (tx.loanerName && tx.loanerName.toLowerCase().includes(search.toLowerCase())) ||
     tx.purpose.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -289,6 +294,15 @@ export default function AdminLedgerPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="loaner">Loaner Name</Label>
+                  <Input 
+                    id="loaner" 
+                    placeholder="e.g. Maria Clara"
+                    value={newRecord.loanerName}
+                    onChange={(e) => setNewRecord({ ...newRecord, loanerName: e.target.value })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="amount">Principal Amount (₱)</Label>
@@ -379,6 +393,9 @@ export default function AdminLedgerPage() {
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
                         <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                        {tx.loanerName && tx.loanerName !== tx.memberName && (
+                          <span className="text-[9px] text-primary italic">Loaner: {tx.loanerName}</span>
+                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -469,6 +486,14 @@ export default function AdminLedgerPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-loaner">Loaner Name</Label>
+              <Input 
+                id="edit-loaner" 
+                value={newRecord.loanerName}
+                onChange={(e) => setNewRecord({ ...newRecord, loanerName: e.target.value })}
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
               <Input 
