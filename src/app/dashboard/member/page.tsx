@@ -29,7 +29,6 @@ import {
 import { 
   CreditCard, 
   Calendar, 
-  ArrowRight, 
   Info, 
   History,
   TrendingUp,
@@ -45,7 +44,8 @@ import {
   Trash2,
   User,
   CheckCircle2,
-  XCircle
+  XCircle,
+  MessageSquareText
 } from 'lucide-react';
 import {
   Dialog,
@@ -68,14 +68,12 @@ export default function MemberDashboard() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const memberId = 'm1';
 
-  // Edit State
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   const [editPurpose, setEditPurpose] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editLoanerName, setEditLoanerName] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Date formatter helper: MMM-DD-YYYY
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -101,15 +99,10 @@ export default function MemberDashboard() {
   };
 
   const handleDeleteLoan = (loanId: string) => {
-    // 1. Check if it's a mock loan (can't delete from constant file, but can hide in session)
     const isMock = MOCK_LOANS.some(l => l.id === loanId);
-    
-    // 2. Remove from local storage if it exists there
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const filteredLocal = localLoans.filter((l: Loan) => l.id !== loanId);
     localStorage.setItem('daryloan_user_loans', JSON.stringify(filteredLocal));
-
-    // 3. Update local state
     setLoans(prev => prev.filter(l => l.id !== loanId));
 
     toast({
@@ -137,18 +130,9 @@ export default function MemberDashboard() {
 
   const handleUpdateLoan = () => {
     if (!editingLoan) return;
-
     const amountNum = parseFloat(editAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid positive number.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (isNaN(amountNum) || amountNum <= 0) return;
 
-    // Update state
     const updatedLoans = loans.map(l => {
       if (l.id === editingLoan.id) {
         return { ...l, purpose: editPurpose, amount: amountNum, loanerName: editLoanerName };
@@ -156,7 +140,6 @@ export default function MemberDashboard() {
       return l;
     });
 
-    // Update local storage if applicable
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const isLocal = localLoans.some((l: Loan) => l.id === editingLoan.id);
     
@@ -172,10 +155,7 @@ export default function MemberDashboard() {
 
     setLoans(updatedLoans);
     setIsEditDialogOpen(false);
-    toast({
-      title: "Request Updated",
-      description: `Application for "${editPurpose}" updated to ₱${amountNum.toLocaleString()}.`,
-    });
+    toast({ title: "Request Updated" });
   };
 
   if (!mounted) return null;
@@ -185,19 +165,12 @@ export default function MemberDashboard() {
   
   const activeLoan = loans.find(l => l.status === 'approved');
   const overdueLoan = loans.find(l => l.status === 'overdue');
-  const recentlyRejected = loans.find(l => l.status === 'rejected');
+  const recentlyDecisioned = loans.find(l => (l.status === 'approved' || l.status === 'rejected') && l.adminNote);
 
   const chartData = myContributions.map(c => ({
     date: c.date,
     amount: c.amount,
   })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const handleExport = (format: string) => {
-    toast({
-      title: "Statement Ready",
-      description: `Your contribution statement has been generated in ${format} format.`,
-    });
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -206,62 +179,44 @@ export default function MemberDashboard() {
           <h1 className="text-3xl font-headline font-bold text-slate-800">Member Portal</h1>
           <p className="text-muted-foreground">Manage your savings and loan applications.</p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold shadow-sm">
-            <Link href="/dashboard/member/request">
-              <Plus className="mr-2 h-4 w-4" /> Request Loan
-            </Link>
-          </Button>
-        </div>
+        <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold shadow-sm">
+          <Link href="/dashboard/member/request">
+            <Plus className="mr-2 h-4 w-4" /> Request Loan
+          </Link>
+        </Button>
       </div>
 
-      {/* Member Alerts & Notifications */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {overdueLoan ? (
+      <div className="grid gap-4">
+        {overdueLoan && (
           <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-pulse">
             <AlertTriangle className="h-5 w-5" />
-            <AlertTitle className="font-bold">URGENT: Overdue Payment Detected</AlertTitle>
+            <AlertTitle className="font-bold uppercase text-xs">Urgent Notice</AlertTitle>
             <AlertDescription className="text-sm">
-              Your loan of ₱{overdueLoan.amount.toLocaleString()} for "{overdueLoan.purpose}" is past its due date. Please settle this immediately to avoid penalties.
+              Your loan of ₱{overdueLoan.amount.toLocaleString()} is overdue. Please settle immediately.
             </AlertDescription>
           </Alert>
-        ) : null}
+        )}
         
-        {activeLoan && (
-          <Alert className="bg-green-50 border-green-200 text-green-700">
-            <CheckCircle2 className="h-5 w-5" />
-            <AlertTitle className="font-bold">Loan Application Approved</AlertTitle>
-            <AlertDescription className="text-sm">
-              Your loan request for ₱{activeLoan.amount.toLocaleString()} has been approved! {activeLoan.dueDate && (
-                <>Your first payment is scheduled for <span className="font-bold underline">{formatDate(activeLoan.dueDate)}</span>.</>
+        {recentlyDecisioned && (
+          <Alert className={cn(
+            "border-2",
+            recentlyDecisioned.status === 'approved' ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
+          )}>
+            <MessageSquareText className="h-5 w-5" />
+            <AlertTitle className="font-bold flex items-center gap-2">
+              Admin Decision: {recentlyDecisioned.status.toUpperCase()}
+            </AlertTitle>
+            <AlertDescription className="text-sm space-y-2">
+              <p>Note from Admin: <span className="font-bold italic">"{recentlyDecisioned.adminNote}"</span></p>
+              {recentlyDecisioned.dueDate && recentlyDecisioned.status === 'approved' && (
+                <p className="text-[10px] uppercase font-bold">Release/Payment Schedule: {formatDate(recentlyDecisioned.dueDate)}</p>
               )}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {recentlyRejected && (
-          <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-700">
-            <XCircle className="h-5 w-5" />
-            <AlertTitle className="font-bold">Application Status: Rejected</AlertTitle>
-            <AlertDescription className="text-sm">
-              Your recent application for ₱{recentlyRejected.amount.toLocaleString()} was not approved at this time. Please contact admin for more details.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!overdueLoan && !activeLoan && !recentlyRejected && (
-          <Alert className="bg-blue-50 border-blue-200 text-blue-700">
-            <Info className="h-5 w-5" />
-            <AlertTitle className="font-bold">Account Insight</AlertTitle>
-            <AlertDescription className="text-sm">
-              No active or overdue loans. Your contribution consistency is high, which builds your credit limit!
             </AlertDescription>
           </Alert>
         )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Total Contributions & Growth Chart */}
         <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
@@ -272,40 +227,14 @@ export default function MemberDashboard() {
           </CardHeader>
           <CardContent>
             <div className="h-[200px] w-full mt-4">
-              <ChartContainer
-                config={{
-                  amount: {
-                    label: "Contribution",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-              >
+              <ChartContainer config={{ amount: { label: "Contribution", color: "hsl(var(--primary))" } }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#888888" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                    />
-                    <YAxis 
-                      stroke="#888888" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      tickFormatter={(value) => `₱${value}`}
-                    />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₱${v}`} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="amount" 
-                      stroke="var(--color-amount)" 
-                      strokeWidth={3} 
-                      dot={{ r: 4, fill: "var(--color-amount)" }} 
-                      activeDot={{ r: 6 }}
-                    />
+                    <Line type="monotone" dataKey="amount" stroke="var(--color-amount)" strokeWidth={3} dot={{ r: 4, fill: "var(--color-amount)" }} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -313,54 +242,38 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        {/* Active Loan Details */}
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Loan Summary</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Loan</CardTitle>
             <CreditCard className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             {activeLoan ? (
               <div className="space-y-6">
                 <div>
-                  <div className="flex justify-between items-end mb-1">
-                    <div className="text-3xl font-headline font-bold text-slate-800">₱{activeLoan.amount.toLocaleString()}</div>
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Active</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Principal amount approved</p>
+                  <div className="text-3xl font-headline font-bold text-slate-800">₱{activeLoan.amount.toLocaleString()}</div>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none mt-1">Status: {activeLoan.status}</Badge>
                 </div>
-                
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-medium">
-                    <span>Repayment Progress</span>
-                    <span>40%</span>
-                  </div>
+                  <div className="flex justify-between text-xs font-medium"><span>Repayment</span><span>40%</span></div>
                   <Progress value={40} className="h-2 bg-slate-100" />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Next Due</p>
-                    <p className="text-sm font-semibold">{formatDate(activeLoan.dueDate) || 'N/A'}</p>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t text-xs">
+                  <div>
+                    <p className="uppercase font-bold text-muted-foreground text-[9px]">Due Date</p>
+                    <p className="font-semibold">{formatDate(activeLoan.dueDate)}</p>
                   </div>
-                  <div className="space-y-1 text-right">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Remaining</p>
-                    <p className="text-sm font-semibold">8 Months</p>
+                  <div className="text-right">
+                    <p className="uppercase font-bold text-muted-foreground text-[9px]">Term Remaining</p>
+                    <p className="font-semibold">{activeLoan.termMonths} Mo</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                <div className="bg-muted p-4 rounded-full">
-                  <Clock className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div className="space-y-1">
-                  <p className="font-semibold text-slate-700">No Active Loans</p>
-                  <p className="text-xs text-muted-foreground">Need financial support? Apply today.</p>
-                </div>
-                <Button asChild size="sm" variant="outline" className="w-full">
-                  <Link href="/dashboard/member/request">Start Application</Link>
-                </Button>
+              <div className="text-center py-12 space-y-4">
+                <Clock className="h-8 w-8 text-muted-foreground mx-auto" />
+                <p className="text-xs text-muted-foreground">No active loans. Need support?</p>
+                <Button asChild size="sm" variant="outline" className="w-full"><Link href="/dashboard/member/request">Request Now</Link></Button>
               </div>
             )}
           </CardContent>
@@ -368,64 +281,12 @@ export default function MemberDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Contribution Ledger with Export */}
         <Card className="border-none shadow-sm bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Contribution Ledger</CardTitle>
-              <CardDescription>Comprehensive savings statement.</CardDescription>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2">
-                  <Download className="h-4 w-4" /> Download Statement
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('Excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" /> Export to Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('PDF')}>
-                  <FileText className="mr-2 h-4 w-4 text-red-600" /> Export to PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('CSV')}>
-                  <FileJson className="mr-2 h-4 w-4 text-blue-600" /> Export to CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <CardHeader>
+            <CardTitle className="text-lg">Request History</CardTitle>
+            <CardDescription>Status and admin release notes.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold">Transaction Date</TableHead>
-                  <TableHead className="font-bold">Reference ID</TableHead>
-                  <TableHead className="text-right font-bold">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {myContributions.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>{formatDate(c.date)}</TableCell>
-                    <TableCell className="font-mono text-[10px] text-muted-foreground tracking-tighter uppercase">DARY-{c.id}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">₱{c.amount.toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Loan History Table */}
-        <Card className="border-none shadow-sm bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Loan Request History</CardTitle>
-              <CardDescription>Track status of past and current requests.</CardDescription>
-            </div>
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
@@ -438,104 +299,98 @@ export default function MemberDashboard() {
               </TableHeader>
               <TableBody>
                 {loans.map((l) => (
-                  <TableRow key={l.id}>
+                  <TableRow key={l.id} className="group transition-colors border-b">
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-800">{l.loanerName || 'Self'}</span>
+                        <span className="font-bold text-slate-800 text-xs">{l.loanerName || 'Self'}</span>
                         <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
+                        {l.adminNote && (
+                          <div className="mt-1 flex items-start gap-1 bg-primary/5 p-1 rounded border border-primary/10">
+                            <MessageSquareText className="h-2 w-2 text-primary mt-0.5 shrink-0" />
+                            <span className="text-[9px] text-primary italic font-medium leading-tight">Note: {l.adminNote}</span>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          "capitalize text-[10px]",
-                          l.status === 'approved' && "bg-green-50 text-green-700 border-green-200",
-                          l.status === 'pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
-                          l.status === 'rejected' && "bg-red-50 text-red-700 border-red-200",
-                          l.status === 'overdue' && "bg-destructive/10 text-destructive border-destructive/20"
-                        )}
-                      >
+                      <Badge variant="outline" className={cn(
+                        "capitalize text-[9px] font-bold",
+                        l.status === 'approved' ? "bg-green-50 text-green-700" : 
+                        l.status === 'pending' ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"
+                      )}>
                         {l.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatDate(l.requestDate)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-slate-700">₱{l.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-[10px] text-muted-foreground">{formatDate(l.requestDate)}</TableCell>
+                    <TableCell className="text-right font-bold text-slate-700 text-xs">₱{l.amount.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
-                          onClick={() => handleEditLoan(l)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
-                          onClick={() => handleDeleteLoan(l.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                        {l.status === 'pending' && (
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400" onClick={() => handleEditLoan(l)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400" onClick={() => handleDeleteLoan(l.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {loans.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground italic">
-                      No loan history found.
-                    </TableCell>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Recent Contributions</CardTitle>
+              <CardDescription>Your savings activity log.</CardDescription>
+            </div>
+            <History className="h-5 w-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50">
+                  <TableHead className="font-bold">Date</TableHead>
+                  <TableHead className="font-bold">Ref ID</TableHead>
+                  <TableHead className="text-right font-bold">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {myContributions.slice(0, 5).map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="text-xs">{formatDate(c.date)}</TableCell>
+                    <TableCell className="font-mono text-[10px] text-muted-foreground uppercase">DARY-{c.id}</TableCell>
+                    <TableCell className="text-right font-bold text-primary text-xs">₱{c.amount.toLocaleString()}</TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
 
-      {/* Edit Loan Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Loan Request</DialogTitle>
-            <DialogDescription>
-              Modify your pending application details.
-            </DialogDescription>
+            <DialogDescription>Modify your pending application details.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="edit-loaner-name">Loaner Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="edit-loaner-name" 
-                  value={editLoanerName}
-                  className="pl-10"
-                  onChange={(e) => setEditLoanerName(e.target.value)}
-                />
-              </div>
+              <Input id="edit-loaner-name" value={editLoanerName} onChange={(e) => setEditLoanerName(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
-              <Input 
-                id="edit-amount" 
-                type="number" 
-                value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
-              />
+              <Input id="edit-amount" type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-purpose">Purpose</Label>
-              <Input 
-                id="edit-purpose" 
-                value={editPurpose}
-                onChange={(e) => setEditPurpose(e.target.value)}
-              />
+              <Input id="edit-purpose" value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)} />
             </div>
           </div>
           <DialogFooter>

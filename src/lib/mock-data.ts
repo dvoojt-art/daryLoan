@@ -1,4 +1,3 @@
-
 export type Member = {
   id: string;
   name: string;
@@ -22,6 +21,7 @@ export type Loan = {
   interestRate: number;
   termMonths: number;
   purpose: string;
+  adminNote?: string;
 };
 
 export type Contribution = {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,17 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { 
   Check, 
   X, 
-  Eye, 
   Clock, 
   Search,
-  ArrowUpDown,
   Filter,
   BrainCircuit,
   Calendar,
-  User
+  User,
+  MessageSquareQuote
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { MOCK_LOANS, MOCK_MEMBERS, Loan } from '@/lib/mock-data';
@@ -29,13 +29,13 @@ export default function AdminLoanApprovals() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [adminNote, setAdminNote] = useState('');
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     setMounted(true);
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    // Admin only sees pending loans in the approval queue
     const pendingLocalLoans = localLoans.filter((l: Loan) => l.status === 'pending');
     const pendingMockLoans = MOCK_LOANS.filter(l => l.status === 'pending');
     setLoans([...pendingLocalLoans, ...pendingMockLoans]);
@@ -59,29 +59,42 @@ export default function AdminLoanApprovals() {
     const member = getMember(loan?.memberId || '');
     const loanerName = loan?.loanerName || member?.name || 'Unknown';
     
-    // Update local UI state (remove from pending queue)
+    // Update local UI state
     setLoans(prev => prev.filter(l => l.id !== id));
     if (selectedLoanId === id) setSelectedLoanId(null);
 
-    // Update persistence layer (localStorage)
+    // Update persistence
     const localLoans: Loan[] = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    const updatedLocal = localLoans.map((l: Loan) => {
-      if (l.id === id) {
-        // When approved, set a default due date 1 month from now
-        const dueDate = action === 'approved' 
-          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
-          : undefined;
-        return { ...l, status: action, dueDate };
-      }
-      return l;
-    });
-    localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
+    const isMock = !localLoans.some(l => l.id === id);
+
+    if (!isMock) {
+      const updatedLocal = localLoans.map((l: Loan) => {
+        if (l.id === id) {
+          const dueDate = action === 'approved' 
+            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+            : undefined;
+          return { ...l, status: action, dueDate, adminNote };
+        }
+        return l;
+      });
+      localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
+    } else {
+      // For mock loans, we just simulate the persistence for this session
+      const mockUpdate: Loan = { 
+        ...loan!, 
+        status: action, 
+        adminNote,
+        dueDate: action === 'approved' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined
+      };
+      localStorage.setItem('daryloan_user_loans', JSON.stringify([mockUpdate, ...localLoans]));
+    }
 
     toast({
       title: `Loan ${action === 'approved' ? 'Approved' : 'Rejected'}`,
-      description: `${loanerName}'s request for ₱${loan?.amount.toLocaleString()} has been processed.`,
+      description: `${loanerName}'s request for ₱${loan?.amount.toLocaleString()} has been processed with your note.`,
       variant: action === 'rejected' ? 'destructive' : 'default',
     });
+    setAdminNote('');
   };
 
   const filteredLoans = loans.filter(l => {
@@ -114,7 +127,6 @@ export default function AdminLoanApprovals() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main List */}
         <Card className="lg:col-span-2 border-none shadow-sm">
           <CardHeader className="pb-3 border-b">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -139,7 +151,7 @@ export default function AdminLoanApprovals() {
                   <TableHead className="font-bold">Loaner / Member Account</TableHead>
                   <TableHead className="font-bold">Principal</TableHead>
                   <TableHead className="font-bold hidden md:table-cell">Request Date</TableHead>
-                  <TableHead className="text-right font-bold">Actions</TableHead>
+                  <TableHead className="text-right font-bold">Quick Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -181,24 +193,9 @@ export default function AdminLoanApprovals() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-green-600 border-green-200 hover:bg-green-50"
-                            onClick={() => handleAction(loan.id, 'approved')}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-destructive border-destructive/20 hover:bg-destructive/5"
-                            onClick={() => handleAction(loan.id, 'rejected')}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="sm" className="text-xs font-bold text-primary">
+                          Review Request
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
@@ -207,16 +204,13 @@ export default function AdminLoanApprovals() {
             </Table>
             {filteredLoans.length === 0 && (
               <div className="text-center py-20 bg-slate-50/50">
-                <div className="bg-slate-100 p-4 rounded-full inline-block mb-4">
-                  <Check className="h-8 w-8 text-slate-400" />
-                </div>
-                <p className="text-slate-500 font-medium">All caught up! No pending loan requests.</p>
+                <Check className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-500 font-medium">All caught up! No pending requests.</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Detail Panel */}
         <div className="space-y-6">
           {selectedLoanId && selectedLoan ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -227,29 +221,17 @@ export default function AdminLoanApprovals() {
                       <CardTitle className="text-xl">Request Summary</CardTitle>
                       <CardDescription className="text-slate-400">Reviewing details for {selectedLoanerName}</CardDescription>
                     </div>
-                    <Badge className="bg-primary text-white border-none">Pending Review</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
-                  <div className="p-4 bg-slate-50 rounded-xl space-y-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-muted-foreground uppercase">Loaner:</span>
-                      <span className="font-bold text-slate-800">{selectedLoanerName}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-muted-foreground uppercase">Account Holder:</span>
-                      <span className="font-bold text-slate-800">{selectedMember?.name}</span>
-                    </div>
-                  </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Principal Amount</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Principal</p>
                       <p className="text-xl font-bold text-slate-800">₱{selectedLoan.amount.toLocaleString()}</p>
                     </div>
                     <div className="space-y-1 text-right">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Repayment Term</p>
-                      <p className="text-xl font-bold text-slate-800">{selectedLoan.termMonths} Months</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Term</p>
+                      <p className="text-xl font-bold text-slate-800">{selectedLoan.termMonths} Mo</p>
                     </div>
                   </div>
 
@@ -259,15 +241,18 @@ export default function AdminLoanApprovals() {
                   </div>
 
                   <div className="space-y-3">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Member Financial Snapshot</p>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Total Contributions:</span>
-                      <span className="font-bold">₱{selectedMember?.totalContributions.toLocaleString() || 0}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Current Shares:</span>
-                      <span className="font-bold">₱{selectedMember?.shares.toLocaleString() || 0}</span>
-                    </div>
+                    <Label htmlFor="admin-note" className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
+                      <MessageSquareQuote className="h-3 w-3" /> Add Note to Member
+                    </Label>
+                    <Textarea 
+                      id="admin-note"
+                      placeholder="e.g., Release funds on Friday morning. Please visit the office."
+                      className="text-xs resize-none"
+                      rows={3}
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                    />
+                    <p className="text-[9px] text-muted-foreground italic">* This note will be visible to the member upon decision.</p>
                   </div>
                 </CardContent>
               </Card>
@@ -287,7 +272,7 @@ export default function AdminLoanApprovals() {
                   className="flex-1 bg-green-600 hover:bg-green-700 h-11"
                   onClick={() => handleAction(selectedLoanId, 'approved')}
                 >
-                  <Check className="mr-2 h-4 w-4" /> Approve Loan
+                  <Check className="mr-2 h-4 w-4" /> Approve
                 </Button>
                 <Button 
                   variant="outline" 
@@ -301,13 +286,8 @@ export default function AdminLoanApprovals() {
           ) : (
             <Card className="border-dashed flex items-center justify-center p-12 h-[400px] bg-muted/20">
               <div className="text-center space-y-4">
-                <div className="bg-muted p-4 rounded-full inline-block">
-                  <BrainCircuit className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div className="space-y-1">
-                  <p className="font-semibold text-slate-700">Detailed Review Panel</p>
-                  <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">Select a request from the list to see member financials and AI risk scoring.</p>
-                </div>
+                <BrainCircuit className="h-8 w-8 text-muted-foreground mx-auto" />
+                <p className="text-xs text-muted-foreground max-w-[180px] mx-auto">Select a request from the list to see member financials and add release notes.</p>
               </div>
             </Card>
           )}
