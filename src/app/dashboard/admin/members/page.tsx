@@ -40,6 +40,8 @@ export default function AdminMembersManagement() {
   const [newMember, setNewMember] = useState({
     name: '',
     email: '',
+    shares: '',
+    contributions: '',
   });
   const { toast } = useToast();
 
@@ -74,16 +76,16 @@ export default function AdminMembersManagement() {
       name: newMember.name,
       email: newMember.email,
       role: 'member',
-      totalContributions: 0,
+      totalContributions: parseFloat(newMember.contributions) || 0,
       joinDate: new Date().toISOString().split('T')[0],
       status: 'active',
-      shares: 0,
+      shares: parseFloat(newMember.shares) || 0,
       profit: 0,
     };
 
     setMembers(prev => [...prev, member]);
     setIsAddDialogOpen(false);
-    setNewMember({ name: '', email: '' });
+    setNewMember({ name: '', email: '', shares: '', contributions: '' });
     
     toast({
       title: "Member Added",
@@ -149,6 +151,28 @@ export default function AdminMembersManagement() {
                     value={newMember.email}
                     onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="shares">Shares (₱)</Label>
+                    <Input 
+                      id="shares" 
+                      type="number"
+                      placeholder="0"
+                      value={newMember.shares}
+                      onChange={(e) => setNewMember({ ...newMember, shares: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="contributions">Contributions (₱)</Label>
+                    <Input 
+                      id="contributions" 
+                      type="number"
+                      placeholder="0"
+                      value={newMember.contributions}
+                      onChange={(e) => setNewMember({ ...newMember, contributions: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
               <DialogFooter>
