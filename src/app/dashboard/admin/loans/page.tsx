@@ -35,9 +35,10 @@ export default function AdminLoanApprovals() {
   useEffect(() => {
     setMounted(true);
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    // Admin only sees pending loans in the approval queue
+    const pendingLocalLoans = localLoans.filter((l: Loan) => l.status === 'pending');
     const pendingMockLoans = MOCK_LOANS.filter(l => l.status === 'pending');
-    // Combine mock and local storage for prototype
-    setLoans([...localLoans, ...pendingMockLoans]);
+    setLoans([...pendingLocalLoans, ...pendingMockLoans]);
   }, []);
 
   const getMember = (id: string) => MOCK_MEMBERS.find(m => m.id === id);
@@ -47,16 +48,22 @@ export default function AdminLoanApprovals() {
     const member = getMember(loan?.memberId || '');
     const loanerName = loan?.loanerName || member?.name || 'Unknown';
     
-    // Update local state
+    // Update local UI state (remove from pending queue)
     setLoans(prev => prev.filter(l => l.id !== id));
     if (selectedLoanId === id) setSelectedLoanId(null);
 
-    // Update localStorage if it was a user-created loan
-    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    // Update persistence layer (localStorage)
+    const localLoans: Loan[] = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const updatedLocal = localLoans.map((l: Loan) => {
-      if (l.id === id) return { ...l, status: action };
+      if (l.id === id) {
+        // When approved, set a default due date 1 month from now
+        const dueDate = action === 'approved' 
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+          : undefined;
+        return { ...l, status: action, dueDate };
+      }
       return l;
-    }).filter((l: Loan) => l.status === 'pending'); // Keep only pending in the approval queue
+    });
     localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
 
     toast({

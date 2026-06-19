@@ -31,7 +31,7 @@ import {
   CreditCard, 
   Calendar, 
   ArrowRight, 
-  Info,
+  Info, 
   History,
   TrendingUp,
   AlertCircle,
@@ -44,7 +44,9 @@ import {
   AlertTriangle,
   Edit,
   Trash2,
-  User
+  User,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import {
   Dialog,
@@ -172,6 +174,7 @@ export default function MemberDashboard() {
   
   const activeLoan = loans.find(l => l.status === 'approved');
   const overdueLoan = loans.find(l => l.status === 'overdue');
+  const recentlyRejected = loans.find(l => l.status === 'rejected');
 
   const chartData = myContributions.map(c => ({
     date: c.date,
@@ -213,22 +216,34 @@ export default function MemberDashboard() {
           </Alert>
         ) : null}
         
-        {activeLoan && activeLoan.dueDate && (
-          <Alert className="bg-primary/5 border-primary/20 text-primary">
-            <Clock className="h-5 w-5" />
-            <AlertTitle className="font-bold">Upcoming Due Date Notification</AlertTitle>
+        {activeLoan && (
+          <Alert className="bg-green-50 border-green-200 text-green-700">
+            <CheckCircle2 className="h-5 w-5" />
+            <AlertTitle className="font-bold">Loan Application Approved</AlertTitle>
             <AlertDescription className="text-sm">
-              Your next payment for the ₱{activeLoan.amount.toLocaleString()} loan is due on <span className="font-bold underline">{activeLoan.dueDate}</span>.
+              Your loan request for ₱{activeLoan.amount.toLocaleString()} has been approved! {activeLoan.dueDate && (
+                <>Your first payment is scheduled for <span className="font-bold underline">{activeLoan.dueDate}</span>.</>
+              )}
             </AlertDescription>
           </Alert>
         )}
 
-        {!overdueLoan && !activeLoan && (
-          <Alert className="bg-green-50 border-green-200 text-green-700">
-            <Info className="h-5 w-5" />
-            <AlertTitle className="font-bold">Account in Good Standing</AlertTitle>
+        {recentlyRejected && (
+          <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-700">
+            <XCircle className="h-5 w-5" />
+            <AlertTitle className="font-bold">Application Status: Rejected</AlertTitle>
             <AlertDescription className="text-sm">
-              You have no outstanding or overdue loans. Your contribution consistency is excellent!
+              Your recent application for ₱{recentlyRejected.amount.toLocaleString()} was not approved at this time. Please contact admin for more details.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!overdueLoan && !activeLoan && !recentlyRejected && (
+          <Alert className="bg-blue-50 border-blue-200 text-blue-700">
+            <Info className="h-5 w-5" />
+            <AlertTitle className="font-bold">Account Insight</AlertTitle>
+            <AlertDescription className="text-sm">
+              No active or overdue loans. Your contribution consistency is high, which builds your credit limit!
             </AlertDescription>
           </Alert>
         )}
