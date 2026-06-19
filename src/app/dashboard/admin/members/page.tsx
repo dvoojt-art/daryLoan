@@ -1,8 +1,9 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,10 @@ import {
   Download,
   Filter,
   Edit,
-  Trash2
+  Trash2,
+  TrendingUp,
+  Wallet,
+  Coins
 } from 'lucide-react';
 import { MOCK_MEMBERS, Member } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
@@ -26,6 +30,15 @@ export default function AdminMembersManagement() {
     m.name.toLowerCase().includes(search.toLowerCase()) || 
     m.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Calculate totals for the footer
+  const totals = useMemo(() => {
+    return filteredMembers.reduce((acc, m) => ({
+      shares: acc.shares + m.shares,
+      contributions: acc.contributions + m.totalContributions,
+      profit: acc.profit + m.profit,
+    }), { shares: 0, contributions: 0, profit: 0 });
+  }, [filteredMembers]);
 
   return (
     <div className="p-6 space-y-6">
@@ -65,35 +78,31 @@ export default function AdminMembersManagement() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                <TableHead className="w-[300px] font-bold text-slate-800 text-[11px] uppercase tracking-wider py-4">Full Name</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Email Address</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Member ID</TableHead>
+                <TableHead className="w-[250px] font-bold text-slate-800 text-[11px] uppercase tracking-wider py-4 pl-6">Member Profile</TableHead>
                 <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Join Date</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Member ID</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Shares</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Contributions</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Profits</TableHead>
                 <TableHead className="text-right font-bold text-slate-800 text-[11px] uppercase tracking-wider pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredMembers.map((member) => (
                 <TableRow key={member.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0">
-                  <TableCell className="py-4">
-                    <div className="flex items-center gap-3 pl-2">
+                  <TableCell className="py-4 pl-6">
+                    <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border-2 border-slate-100">
                         <AvatarImage src={`https://picsum.photos/seed/${member.id}/100/100`} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
                           {member.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-bold text-slate-800">{member.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800">{member.name}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{member.email}</span>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-slate-600">{member.email}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-[10px] tracking-tighter uppercase border-slate-200 text-slate-500">
-                      ID-{member.id.toUpperCase()}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge 
@@ -109,7 +118,18 @@ export default function AdminMembersManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-medium text-slate-500">{member.joinDate}</span>
+                    <Badge variant="outline" className="font-mono text-[10px] tracking-tighter uppercase border-slate-200 text-slate-500">
+                      {member.id.toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-semibold text-slate-700">
+                    ₱{member.shares.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold text-primary">
+                    ₱{member.totalContributions.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-green-600">
+                    ₱{member.profit.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-1">
@@ -124,6 +144,15 @@ export default function AdminMembersManagement() {
                 </TableRow>
               ))}
             </TableBody>
+            <TableFooter className="bg-slate-50 font-bold border-t-2">
+              <TableRow>
+                <TableCell colSpan={3} className="pl-6 py-4 text-slate-800">AGGREGATE TOTALS</TableCell>
+                <TableCell className="text-right text-slate-800">₱{totals.shares.toLocaleString()}</TableCell>
+                <TableCell className="text-right text-primary">₱{totals.contributions.toLocaleString()}</TableCell>
+                <TableCell className="text-right text-green-600">₱{totals.profit.toLocaleString()}</TableCell>
+                <TableCell className="pr-6"></TableCell>
+              </TableRow>
+            </TableFooter>
           </Table>
           {filteredMembers.length === 0 && (
             <div className="text-center py-20 bg-slate-50/50">
@@ -132,6 +161,30 @@ export default function AdminMembersManagement() {
           )}
         </CardContent>
       </Card>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+        <div className="p-4 bg-white border rounded-xl shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Community Shares</p>
+            <p className="text-2xl font-bold text-slate-800">₱{totals.shares.toLocaleString()}</p>
+          </div>
+          <Coins className="h-8 w-8 text-primary/20" />
+        </div>
+        <div className="p-4 bg-white border rounded-xl shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Member Savings</p>
+            <p className="text-2xl font-bold text-primary">₱{totals.contributions.toLocaleString()}</p>
+          </div>
+          <Wallet className="h-8 w-8 text-primary/20" />
+        </div>
+        <div className="p-4 bg-white border rounded-xl shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Profit Distributed</p>
+            <p className="text-2xl font-bold text-green-600">₱{totals.profit.toLocaleString()}</p>
+          </div>
+          <TrendingUp className="h-8 w-8 text-green-600/20" />
+        </div>
+      </div>
     </div>
   );
 }
