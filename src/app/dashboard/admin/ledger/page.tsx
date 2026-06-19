@@ -13,6 +13,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from '@/components/ui/label';
 import { 
   Search, 
   Download,
@@ -23,13 +40,25 @@ import {
   TrendingUp,
   ChevronDown,
   Edit,
-  Trash2
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
+  const { toast } = useToast();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Form State for new record
+  const [newRecord, setNewRecord] = useState({
+    memberId: '',
+    amount: '',
+    purpose: '',
+    termMonths: '12',
+  });
 
   // Initial data setup
   const initialLedgerData = useMemo(() => {
@@ -55,6 +84,50 @@ export default function AdminLedgerPage() {
 
   const handleStatusChange = (id: string, month: 'month1' | 'month2' | 'month3', newStatus: string) => {
     setLedgerData(prev => prev.map(item => item.id === id ? { ...item, [month]: newStatus } : item));
+  };
+
+  const handleAddRecord = () => {
+    if (!newRecord.memberId || !newRecord.amount || !newRecord.purpose) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const member = MOCK_MEMBERS.find(m => m.id === newRecord.memberId);
+    const amountNum = parseFloat(newRecord.amount);
+    const termNum = parseInt(newRecord.termMonths);
+    const interest = amountNum * 0.10;
+    const total = amountNum + (interest * termNum);
+
+    const newEntry = {
+      id: `l-new-${Date.now()}`,
+      memberId: newRecord.memberId,
+      amount: amountNum,
+      status: 'approved' as const,
+      requestDate: new Date().toISOString().split('T')[0],
+      interestRate: 0.10,
+      termMonths: termNum,
+      purpose: newRecord.purpose,
+      memberName: member?.name || 'Unknown',
+      memberEmail: member?.email || '',
+      interest,
+      total,
+      month1: 'pending',
+      month2: 'pending',
+      month3: 'pending',
+    };
+
+    setLedgerData(prev => [newEntry, ...prev]);
+    setIsAddDialogOpen(false);
+    setNewRecord({ memberId: '', amount: '', purpose: '', termMonths: '12' });
+    
+    toast({
+      title: "Record Added",
+      description: `Successfully added financial record for ${member?.name}.`,
+    });
   };
 
   const filteredLedger = ledgerData.filter(tx => 
@@ -113,9 +186,76 @@ export default function AdminLedgerPage() {
           <Button variant="outline" className="h-10">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-          <Button className="bg-primary h-10">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Add Record
-          </Button>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary h-10">
+                <Plus className="mr-2 h-4 w-4" /> Add Record
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add Financial Record</DialogTitle>
+                <DialogDescription>
+                  Manually enter a new loan record into the master ledger.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="member">Select Member</Label>
+                  <Select onValueChange={(val) => setNewRecord({ ...newRecord, memberId: val })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOCK_MEMBERS.filter(m => m.role === 'member').map(member => (
+                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="amount">Principal Amount (₱)</Label>
+                  <Input 
+                    id="amount" 
+                    type="number" 
+                    placeholder="5000"
+                    value={newRecord.amount}
+                    onChange={(e) => setNewRecord({ ...newRecord, amount: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="purpose">Purpose</Label>
+                  <Input 
+                    id="purpose" 
+                    placeholder="e.g. Business expansion"
+                    value={newRecord.purpose}
+                    onChange={(e) => setNewRecord({ ...newRecord, purpose: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="term">Term (Months)</Label>
+                  <Select 
+                    defaultValue="12"
+                    onValueChange={(val) => setNewRecord({ ...newRecord, termMonths: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="12 Months" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6">6 Months</SelectItem>
+                      <SelectItem value="12">12 Months</SelectItem>
+                      <SelectItem value="24">24 Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddRecord}>Save Record</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
