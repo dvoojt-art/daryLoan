@@ -29,13 +29,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/select";
 import { Label } from '@/components/ui/label';
 import { 
   Search, 
   Download,
   Filter,
-  FileSpreadsheet,
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -52,19 +51,22 @@ export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Form State for new record
+  // Form State for new/edit record
   const [newRecord, setNewRecord] = useState({
     memberId: '',
     amount: '',
     purpose: '',
     termMonths: '3',
   });
+
+  const [editingRecord, setEditingRecord] = useState<any>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -103,18 +105,59 @@ export default function AdminLedgerPage() {
     setLedgerData(prev => prev.map(item => item.id === id ? { ...item, [month]: newStatus } : item));
   };
 
-  const handleEdit = (id: string) => {
-    toast({
-      title: "Edit Record",
-      description: "Opening secure ledger entry for modifications.",
+  const handleEdit = (record: any) => {
+    setEditingRecord(record);
+    setNewRecord({
+      memberId: record.memberId,
+      amount: record.amount.toString(),
+      purpose: record.purpose,
+      termMonths: record.termMonths.toString(),
     });
+    setIsEditDialogOpen(true);
   };
 
   const handleDelete = (id: string) => {
+    setLedgerData(prev => prev.filter(item => item.id !== id));
     toast({
-      title: "Delete Record",
-      description: "Removing financial entry from the master ledger.",
+      title: "Record Removed",
+      description: "Financial entry has been deleted from the master ledger.",
       variant: "destructive",
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!newRecord.amount || !newRecord.purpose) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const amountNum = parseFloat(newRecord.amount);
+    const termNum = parseInt(newRecord.termMonths);
+    const interest = amountNum * 0.10;
+    const total = amountNum + (interest * termNum);
+
+    setLedgerData(prev => prev.map(item => {
+      if (item.id === editingRecord.id) {
+        return {
+          ...item,
+          amount: amountNum,
+          purpose: newRecord.purpose,
+          termMonths: termNum,
+          interest,
+          total
+        };
+      }
+      return item;
+    }));
+
+    setIsEditDialogOpen(false);
+    toast({
+      title: "Record Updated",
+      description: `Successfully modified ledger entry for ${editingRecord.memberName}.`,
     });
   };
 
@@ -367,7 +410,7 @@ export default function AdminLedgerPage() {
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
-                        onClick={() => handleEdit(tx.id)}
+                        onClick={() => handleEdit(tx)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -416,6 +459,57 @@ export default function AdminLedgerPage() {
           <Clock className="h-8 w-8 text-white/30" />
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Ledger Entry</DialogTitle>
+            <DialogDescription>
+              Modify details for {editingRecord?.memberName}'s financial record.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
+              <Input 
+                id="edit-amount" 
+                type="number" 
+                value={newRecord.amount}
+                onChange={(e) => setNewRecord({ ...newRecord, amount: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-purpose">Purpose</Label>
+              <Input 
+                id="edit-purpose" 
+                value={newRecord.purpose}
+                onChange={(e) => setNewRecord({ ...newRecord, purpose: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-term">Term (Months)</Label>
+              <Select 
+                value={newRecord.termMonths}
+                onValueChange={(val) => setNewRecord({ ...newRecord, termMonths: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 Month</SelectItem>
+                  <SelectItem value="2">2 Months</SelectItem>
+                  <SelectItem value="3">3 Months</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
