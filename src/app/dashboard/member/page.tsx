@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -432,6 +431,7 @@ export default function MemberDashboard() {
                 <TableRow className="bg-slate-50/50">
                   <TableHead className="font-bold">Loaner / Purpose</TableHead>
                   <TableHead className="font-bold">Status</TableHead>
+                  <TableHead className="font-bold">Date</TableHead>
                   <TableHead className="text-right font-bold">Principal</TableHead>
                   <TableHead className="text-right font-bold">Actions</TableHead>
                 </TableRow>
@@ -459,6 +459,9 @@ export default function MemberDashboard() {
                         {l.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDate(l.requestDate)}
+                    </TableCell>
                     <TableCell className="text-right font-bold text-slate-700">₱{l.amount.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -484,7 +487,7 @@ export default function MemberDashboard() {
                 ))}
                 {loans.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground italic">
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground italic">
                       No loan history found.
                     </TableCell>
                   </TableRow>
