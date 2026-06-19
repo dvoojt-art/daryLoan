@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -84,6 +85,21 @@ export default function AdminLedgerPage() {
 
   const handleStatusChange = (id: string, month: 'month1' | 'month2' | 'month3', newStatus: string) => {
     setLedgerData(prev => prev.map(item => item.id === id ? { ...item, [month]: newStatus } : item));
+  };
+
+  const handleEdit = (id: string) => {
+    toast({
+      title: "Edit Record",
+      description: "Opening secure ledger entry for modifications.",
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    toast({
+      title: "Delete Record",
+      description: "Removing financial entry from the master ledger.",
+      variant: "destructive",
+    });
   };
 
   const handleAddRecord = () => {
@@ -329,10 +345,20 @@ export default function AdminLedgerPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-primary">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
+                        onClick={() => handleEdit(tx.id)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-destructive">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
+                        onClick={() => handleDelete(tx.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

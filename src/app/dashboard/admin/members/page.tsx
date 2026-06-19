@@ -21,10 +21,34 @@ import {
 } from 'lucide-react';
 import { MOCK_MEMBERS, Member } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminMembersManagement() {
   const [members] = useState<Member[]>(MOCK_MEMBERS.filter(m => m.role === 'member'));
   const [search, setSearch] = useState('');
+  const { toast } = useToast();
+
+  const handleEdit = (member: Member) => {
+    toast({
+      title: "Edit Member Profile",
+      description: `Accessing secure records for ${member.name}.`,
+    });
+  };
+
+  const handleDelete = (member: Member) => {
+    toast({
+      title: "System Alert: Delete Action",
+      description: `You are about to remove ${member.name} from the active database.`,
+      variant: "destructive",
+    });
+  };
+
+  const handleAddMember = () => {
+    toast({
+      title: "Onboarding Portal",
+      description: "Redirecting to new member registration and vetting module.",
+    });
+  };
 
   const filteredMembers = members.filter(m => 
     m.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -51,7 +75,7 @@ export default function AdminMembersManagement() {
           <Button variant="outline" className="h-10">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-          <Button className="bg-primary h-10 shadow-md">
+          <Button className="bg-primary h-10 shadow-md" onClick={handleAddMember}>
             <UserPlus className="mr-2 h-4 w-4" /> Add New Member
           </Button>
         </div>
@@ -133,10 +157,20 @@ export default function AdminMembersManagement() {
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-primary">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
+                        onClick={() => handleEdit(member)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-destructive">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
+                        onClick={() => handleDelete(member)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
