@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,7 +18,8 @@ import {
   Zap,
   History,
   CheckCircle2,
-  User
+  User,
+  MessageSquareText
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_MEMBERS, Loan } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -268,6 +268,15 @@ export default function AdminDashboard() {
                         </Badge>
                       )}
                     </div>
+                    {loan.adminNote && (
+                      <div className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100 flex items-start gap-2 max-w-md">
+                        <MessageSquareText className="h-3 w-3 text-slate-400 mt-0.5 shrink-0" />
+                        <p className="text-[11px] text-slate-500 italic leading-relaxed">
+                          <span className="font-bold text-slate-400 mr-1">Admin Note:</span>
+                          "{loan.adminNote}"
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

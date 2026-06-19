@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Search, 
   Download,
@@ -40,7 +41,8 @@ import {
   ChevronDown,
   Edit,
   Trash2,
-  Plus
+  Plus,
+  MessageSquareText
 } from 'lucide-react';
 import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +62,7 @@ export default function AdminLedgerPage() {
     amount: '',
     purpose: '',
     termMonths: '3',
+    adminNote: '',
   });
 
   const [editingRecord, setEditingRecord] = useState<any>(null);
@@ -113,6 +116,7 @@ export default function AdminLedgerPage() {
       amount: record.amount.toString(),
       purpose: record.purpose,
       termMonths: record.termMonths.toString(),
+      adminNote: record.adminNote || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -150,7 +154,8 @@ export default function AdminLedgerPage() {
           purpose: newRecord.purpose,
           termMonths: termNum,
           interest,
-          total
+          total,
+          adminNote: newRecord.adminNote,
         };
       }
       return item;
@@ -196,11 +201,12 @@ export default function AdminLedgerPage() {
       month1: 'pending',
       month2: 'pending',
       month3: 'pending',
+      adminNote: newRecord.adminNote,
     };
 
     setLedgerData(prev => [newEntry, ...prev]);
     setIsAddDialogOpen(false);
-    setNewRecord({ memberId: '', loanerName: '', amount: '', purpose: '', termMonths: '3' });
+    setNewRecord({ memberId: '', loanerName: '', amount: '', purpose: '', termMonths: '3', adminNote: '' });
     
     toast({
       title: "Record Added",
@@ -339,6 +345,17 @@ export default function AdminLedgerPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="note">Admin Release Note</Label>
+                  <Textarea 
+                    id="note" 
+                    placeholder="Optional release instructions..."
+                    value={newRecord.adminNote}
+                    onChange={(e) => setNewRecord({ ...newRecord, adminNote: e.target.value })}
+                    className="text-xs resize-none"
+                    rows={2}
+                  />
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
@@ -392,7 +409,14 @@ export default function AdminLedgerPage() {
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                          {tx.adminNote && (
+                            <Badge variant="ghost" className="h-3.5 px-1 bg-slate-100 text-[8px] text-slate-500 font-bold border-none">
+                              <MessageSquareText className="h-2 w-2 mr-1" /> NOTE
+                            </Badge>
+                          )}
+                        </div>
                         {tx.loanerName && tx.loanerName !== tx.memberName && (
                           <span className="text-[9px] text-primary italic">Loaner: {tx.loanerName}</span>
                         )}
@@ -526,6 +550,17 @@ export default function AdminLedgerPage() {
                   <SelectItem value="3">3 Months</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-note">Admin Release Note</Label>
+              <Textarea 
+                id="edit-note" 
+                placeholder="Release instructions..."
+                value={newRecord.adminNote}
+                onChange={(e) => setNewRecord({ ...newRecord, adminNote: e.target.value })}
+                className="text-xs resize-none"
+                rows={2}
+              />
             </div>
           </div>
           <DialogFooter>
