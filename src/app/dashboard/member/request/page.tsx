@@ -263,7 +263,7 @@ export default function LoanRequestPage() {
                   Member contribution consistency is evaluated for instant probability.
                 </p>
                 <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500">
-                  =IF(ACCOUNT_CONSISTENCY > 0.8, "85%", "Review")
+                  =IF(ACCOUNT_CONSISTENCY &gt; 0.8, "85%", "Review")
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700">Result:</span>
