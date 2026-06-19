@@ -17,12 +17,13 @@ import {
   Search, 
   Download,
   Filter,
-  History,
   FileSpreadsheet,
   CheckCircle2,
   Clock,
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
@@ -187,9 +188,14 @@ export default function AdminLedgerPage() {
                     <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <History className="h-4 w-4 text-muted-foreground" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
