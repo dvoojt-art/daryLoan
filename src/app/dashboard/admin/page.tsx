@@ -14,18 +14,25 @@ import {
   Download,
   ArrowRight,
   ShieldCheck,
-  Zap
+  Zap,
+  History,
+  CheckCircle2
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_MEMBERS } from '@/lib/mock-data';
 import { useState } from 'react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
   const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
   const newApplications = MOCK_MEMBERS.filter(m => m.status === 'pending');
   const totalDisbursed = MOCK_LOANS.filter(l => l.status === 'approved' || l.status === 'overdue').reduce((acc, l) => acc + l.amount, 0);
-  const totalOutstanding = totalDisbursed * 0.85;
+  
+  // Sort loans by date to show most recent activity
+  const recentActivity = [...MOCK_LOANS].sort((a, b) => 
+    new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
+  ).slice(0, 5);
 
   return (
     <div className="p-6 space-y-8">
@@ -182,6 +189,79 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Activity Section */}
+      <Card className="border-none shadow-sm bg-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold">Recent Financial Activity</CardTitle>
+              <CardDescription className="text-xs">Live stream of community transactions and updates.</CardDescription>
+            </div>
+            <History className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {recentActivity.map((loan) => {
+              const member = MOCK_MEMBERS.find(m => m.id === loan.memberId);
+              return (
+                <div key={loan.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
+                  <div className={cn(
+                    "mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm border",
+                    loan.status === 'approved' ? "bg-green-50 text-green-600 border-green-100" : 
+                    loan.status === 'overdue' ? "bg-red-50 text-red-600 border-red-100" : 
+                    loan.status === 'rejected' ? "bg-slate-50 text-slate-400 border-slate-100" :
+                    "bg-yellow-50 text-yellow-600 border-yellow-100"
+                  )}>
+                    {loan.status === 'approved' ? <CheckCircle2 className="h-4 w-4" /> : 
+                     loan.status === 'overdue' ? <AlertTriangle className="h-4 w-4" /> : 
+                     loan.status === 'rejected' ? <ShieldCheck className="h-4 w-4" /> :
+                     <Clock className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-bold text-slate-800">
+                        {member?.name} 
+                        <span className="font-normal text-muted-foreground ml-1">
+                          {loan.status === 'pending' ? 'submitted a request for' : 
+                           loan.status === 'approved' ? 'loan agreement finalized for' : 
+                           loan.status === 'overdue' ? 'loan marked as overdue for' : 
+                           loan.status === 'rejected' ? 'loan request denied for' : 'repaid'}
+                        </span>
+                      </p>
+                      <span className="text-[10px] text-muted-foreground font-medium">{loan.requestDate}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-primary">₱{loan.amount.toLocaleString()}</p>
+                      <Badge variant="secondary" className="text-[9px] uppercase tracking-tighter h-4 px-2 font-bold">
+                        {loan.purpose}
+                      </Badge>
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-[9px] uppercase font-bold h-4 px-2",
+                          loan.status === 'approved' && "bg-green-50 text-green-700 border-green-200",
+                          loan.status === 'pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
+                          loan.status === 'rejected' && "bg-red-50 text-red-700 border-red-200",
+                          loan.status === 'overdue' && "bg-destructive/10 text-destructive border-destructive/20"
+                        )}
+                      >
+                        {loan.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <Button variant="ghost" size="sm" className="w-full mt-6 text-xs text-primary hover:bg-primary/5 font-bold" asChild>
+            <Link href="/dashboard/admin/ledger">
+              View Full Master Audit Trail <ArrowRight className="ml-2 h-3 w-3" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
