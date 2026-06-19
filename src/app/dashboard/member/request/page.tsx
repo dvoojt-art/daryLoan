@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -37,8 +38,23 @@ export default function LoanRequestPage() {
 
     setIsSubmitting(true);
 
-    // Simulate submission process
+    // Simulate submission process and save to localStorage for prototype persistence
     setTimeout(() => {
+      const newLoan = {
+        id: `l-user-${Date.now()}`,
+        memberId: 'm1', // Current member ID
+        amount: amount,
+        status: 'pending',
+        requestDate: new Date().toISOString().split('T')[0],
+        interestRate: interestRate,
+        termMonths: term,
+        purpose: purpose,
+      };
+
+      // Get existing local loans
+      const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+      localStorage.setItem('daryloan_user_loans', JSON.stringify([newLoan, ...localLoans]));
+
       setIsSubmitting(false);
       toast({
         title: "Application Submitted",

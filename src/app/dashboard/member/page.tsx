@@ -1,5 +1,7 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -41,20 +43,34 @@ import {
   Plus,
   AlertTriangle
 } from 'lucide-react';
-import { MOCK_LOANS, MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
+import { MOCK_LOANS, MOCK_CONTRIBUTIONS, Loan } from '@/lib/mock-data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 export default function MemberDashboard() {
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+  const [loans, setLoans] = useState<Loan[]>([]);
   const memberId = 'm1';
-  const myLoans = MOCK_LOANS.filter(l => l.memberId === memberId);
+
+  useEffect(() => {
+    setMounted(true);
+    // Combine mock loans with any locally submitted ones
+    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    const myMockLoans = MOCK_LOANS.filter(l => l.memberId === memberId);
+    setLoans([...localLoans, ...myMockLoans].sort((a, b) => 
+      new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
+    ));
+  }, []);
+
+  if (!mounted) return null;
+
   const myContributions = MOCK_CONTRIBUTIONS.filter(c => c.memberId === memberId);
   const totalContributed = myContributions.reduce((acc, c) => acc + c.amount, 0);
   
-  const activeLoan = myLoans.find(l => l.status === 'approved');
-  const overdueLoan = myLoans.find(l => l.status === 'overdue');
+  const activeLoan = loans.find(l => l.status === 'approved');
+  const overdueLoan = loans.find(l => l.status === 'overdue');
 
   const chartData = myContributions.map(c => ({
     date: c.date,
@@ -198,7 +214,7 @@ export default function MemberDashboard() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Next Due</p>
-                    <p className="text-sm font-semibold">{activeLoan.dueDate}</p>
+                    <p className="text-sm font-semibold">{activeLoan.dueDate || 'N/A'}</p>
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Remaining</p>
@@ -292,7 +308,7 @@ export default function MemberDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myLoans.map((l) => (
+                {loans.map((l) => (
                   <TableRow key={l.id}>
                     <TableCell className="font-medium">{l.purpose}</TableCell>
                     <TableCell>
@@ -312,6 +328,13 @@ export default function MemberDashboard() {
                     <TableCell className="text-right font-bold text-slate-700">₱{l.amount.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
+                {loans.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground italic">
+                      No loan history found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
