@@ -57,11 +57,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-[#010642] border-r border-white/10 transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          <div className="h-16 flex items-center px-6 border-b bg-[#010642]">
+          <div className="h-16 flex items-center px-6 border-b border-white/10">
             <Link href="/" className="flex items-center gap-2">
               <Wallet className="h-6 w-6 text-accent" />
               <div className="flex flex-col -space-y-1">
@@ -84,29 +84,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group",
                     isActive 
-                      ? "bg-primary text-white" 
-                      : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                      ? "bg-accent text-white shadow-lg shadow-accent/20" 
+                      : "text-slate-400 hover:bg-white/5 hover:text-white"
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-muted-foreground group-hover:text-primary")} />
+                  <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-slate-400 group-hover:text-white")} />
                   <span className="font-medium text-sm">{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="p-4 border-t space-y-4">
+          <div className="p-4 border-t border-white/10 space-y-4">
             <div className="flex items-center gap-3 px-3">
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-9 w-9 border border-white/10">
                 <AvatarImage src={`https://picsum.photos/seed/${isAdmin ? 'admin' : 'member'}/100/100`} />
                 <AvatarFallback>{isAdmin ? 'AD' : 'ME'}</AvatarFallback>
               </Avatar>
               <div className="overflow-hidden">
-                <p className="text-sm font-semibold truncate">{isAdmin ? 'Admin Portal' : 'Member Portal'}</p>
-                <p className="text-xs text-muted-foreground truncate">{isAdmin ? 'Full Access' : 'View and Request Only'}</p>
+                <p className="text-sm font-semibold truncate text-white">{isAdmin ? 'Admin Portal' : 'Member Portal'}</p>
+                <p className="text-xs text-slate-400 truncate">{isAdmin ? 'Full Access' : 'View and Request Only'}</p>
               </div>
             </div>
-            <Button asChild variant="ghost" className="w-full justify-start text-muted-foreground hover:text-destructive">
+            <Button asChild variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/5">
               <Link href="/login">
                 <LogOut className="mr-3 h-5 w-5" />
                 Logout
