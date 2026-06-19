@@ -114,41 +114,41 @@ export default function LandingPage() {
               
               <div className="relative">
                 <div className="absolute -inset-4 bg-primary/10 rounded-3xl blur-2xl opacity-50" />
-                <div className="relative bg-white p-8 rounded-3xl shadow-2xl border border-primary/10 overflow-hidden">
-                  <div className="flex items-center justify-between mb-8 border-b pb-4">
+                <div className="relative bg-[#010642] p-8 rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+                  <div className="flex items-center justify-between mb-8 border-b border-white/10 pb-4">
                     <div className="flex items-center gap-2">
                       <div className="bg-green-500 h-3 w-3 rounded-full" />
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Admin Formula Editor</span>
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Admin Formula Editor</span>
                     </div>
-                    <TableIcon className="h-5 w-5 text-slate-300" />
+                    <TableIcon className="h-5 w-5 text-slate-400" />
                   </div>
                   
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-slate-400 uppercase">Formula Input (Cell B14)</label>
-                      <div className="bg-slate-100 p-4 rounded-xl font-code text-sm text-primary border-2 border-primary/20 flex items-center gap-3">
-                        <span className="text-primary font-bold">fx</span>
-                        <span className="text-slate-800">=PMT(INTEREST_RATE/12, TERM, LOAN_AMOUNT)</span>
+                      <div className="bg-white/10 p-4 rounded-xl font-code text-sm text-accent border border-white/10 flex items-center gap-3">
+                        <span className="text-accent font-bold">fx</span>
+                        <span className="text-white">=PMT(INTEREST_RATE/12, TERM, LOAN_AMOUNT)</span>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Status Check</p>
-                        <div className="font-code text-xs text-slate-500 mb-2">=IF(B14 &gt; 0, "Valid", "N/A")</div>
-                        <p className="text-xl font-headline font-bold text-green-600">Valid</p>
+                        <div className="font-code text-xs text-slate-400 mb-2">=IF(B14 &gt; 0, "Valid", "N/A")</div>
+                        <p className="text-xl font-headline font-bold text-green-400">Valid</p>
                       </div>
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Resulting Amortization</p>
-                        <div className="font-code text-xs text-slate-500 mb-2">Display Value</div>
+                        <div className="font-code text-xs text-slate-400 mb-2">Display Value</div>
                         <p className="text-xl font-headline font-bold text-accent">₱1,245.50</p>
                       </div>
                     </div>
                     
                     <div className="pt-4 flex items-center justify-center">
-                      <div className="bg-primary/5 px-4 py-2 rounded-full flex items-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                        <span className="text-[10px] font-bold text-primary uppercase">Formula Engine Active</span>
+                      <div className="bg-white/5 px-4 py-2 rounded-full flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+                        <span className="text-[10px] font-bold text-slate-300 uppercase">Formula Engine Active</span>
                       </div>
                     </div>
                   </div>
