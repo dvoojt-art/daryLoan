@@ -12,7 +12,8 @@ import {
   UserPlus, 
   Download,
   Filter,
-  MoreHorizontal
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { MOCK_MEMBERS, Member } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
@@ -30,7 +31,7 @@ export default function AdminMembersManagement() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold text-slate-800">Member Insight Hub</h1>
+          <h1 className="text-3xl font-headline font-bold text-slate-800 tracking-tight">Member Insight Hub</h1>
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Manage your centralized community member database</p>
         </div>
         <div className="flex gap-2">
@@ -111,9 +112,14 @@ export default function AdminMembersManagement() {
                     <span className="text-xs font-medium text-slate-500">{member.joinDate}</span>
                   </TableCell>
                   <TableCell className="text-right pr-6">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-primary">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
