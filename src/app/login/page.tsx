@@ -34,21 +34,21 @@ export default function LoginPage() {
         </Button>
       </div>
 
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-8 bg-[#010642] p-8 rounded-3xl shadow-2xl border border-white/10">
         <div className="text-center space-y-2">
           <Link href="/" className="flex items-center justify-center gap-2">
-            <div className="bg-primary p-2 rounded-lg">
+            <div className="bg-accent p-2 rounded-lg">
               <Wallet className="h-6 w-6 text-white" />
             </div>
             <div className="flex flex-col items-start -space-y-1 text-left">
               <h1 className="text-3xl font-headline">
-                <span className="font-bold text-slate-800">Dary</span>
+                <span className="font-bold text-white">Dary</span>
                 <span className="text-accent font-medium">Loan</span>
               </h1>
-              <span className="text-[10px] text-muted-foreground font-medium italic">Problema mo'y may solusyon!</span>
+              <span className="text-[10px] text-slate-300 font-medium italic">Problema mo'y may solusyon!</span>
             </div>
           </Link>
-          <p className="text-muted-foreground pt-4 text-sm">Secure Portal Login</p>
+          <p className="text-slate-400 pt-4 text-sm font-medium uppercase tracking-wider">Secure Portal Login</p>
         </div>
 
         <Card className="border-none shadow-xl overflow-hidden">
