@@ -9,6 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { 
   Search, 
   UserPlus, 
   Download,
@@ -24,8 +34,13 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminMembersManagement() {
-  const [members] = useState<Member[]>(MOCK_MEMBERS.filter(m => m.role === 'member'));
+  const [members, setMembers] = useState<Member[]>(MOCK_MEMBERS.filter(m => m.role === 'member'));
   const [search, setSearch] = useState('');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    name: '',
+    email: '',
+  });
   const { toast } = useToast();
 
   const handleEdit = (member: Member) => {
@@ -36,17 +51,43 @@ export default function AdminMembersManagement() {
   };
 
   const handleDelete = (member: Member) => {
+    setMembers(prev => prev.filter(m => m.id !== member.id));
     toast({
-      title: "System Alert: Delete Action",
-      description: `You are about to remove ${member.name} from the active database.`,
+      title: "Member Removed",
+      description: `${member.name} has been removed from the database.`,
       variant: "destructive",
     });
   };
 
   const handleAddMember = () => {
+    if (!newMember.name || !newMember.email) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide both name and email.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const member: Member = {
+      id: `m-new-${Date.now()}`,
+      name: newMember.name,
+      email: newMember.email,
+      role: 'member',
+      totalContributions: 0,
+      joinDate: new Date().toISOString().split('T')[0],
+      status: 'active',
+      shares: 0,
+      profit: 0,
+    };
+
+    setMembers(prev => [...prev, member]);
+    setIsAddDialogOpen(false);
+    setNewMember({ name: '', email: '' });
+    
     toast({
-      title: "Onboarding Portal",
-      description: "Redirecting to new member registration and vetting module.",
+      title: "Member Added",
+      description: `Successfully onboarded ${newMember.name}.`,
     });
   };
 
@@ -75,9 +116,47 @@ export default function AdminMembersManagement() {
           <Button variant="outline" className="h-10">
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
-          <Button className="bg-primary h-10 shadow-md" onClick={handleAddMember}>
-            <UserPlus className="mr-2 h-4 w-4" /> Add New Member
-          </Button>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary h-10 shadow-md">
+                <UserPlus className="mr-2 h-4 w-4" /> Add New Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Register New Member</DialogTitle>
+                <DialogDescription>
+                  Enter the details for the new community member.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="e.g. Maria Clara"
+                    value={newMember.name}
+                    onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    placeholder="maria@example.com"
+                    value={newMember.email}
+                    onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddMember}>Add Member</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
