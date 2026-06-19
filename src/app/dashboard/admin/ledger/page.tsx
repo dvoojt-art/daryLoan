@@ -57,7 +57,7 @@ export default function AdminLedgerPage() {
     memberId: '',
     amount: '',
     purpose: '',
-    termMonths: '12',
+    termMonths: '3',
   });
 
   // Initial data setup
@@ -122,7 +122,7 @@ export default function AdminLedgerPage() {
 
     setLedgerData(prev => [newEntry, ...prev]);
     setIsAddDialogOpen(false);
-    setNewRecord({ memberId: '', amount: '', purpose: '', termMonths: '12' });
+    setNewRecord({ memberId: '', amount: '', purpose: '', termMonths: '3' });
     
     toast({
       title: "Record Added",
@@ -236,16 +236,16 @@ export default function AdminLedgerPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="term">Term (Months)</Label>
                   <Select 
-                    defaultValue="12"
+                    defaultValue="3"
                     onValueChange={(val) => setNewRecord({ ...newRecord, termMonths: val })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="12 Months" />
+                      <SelectValue placeholder="3 Months" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="6">6 Months</SelectItem>
-                      <SelectItem value="12">12 Months</SelectItem>
-                      <SelectItem value="24">24 Months</SelectItem>
+                      <SelectItem value="1">1 Month</SelectItem>
+                      <SelectItem value="2">2 Months</SelectItem>
+                      <SelectItem value="3">3 Months</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
