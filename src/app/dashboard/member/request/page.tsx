@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ExcelFormulaInput } from '@/components/ExcelFormulaInput';
-import { ShieldCheck, ArrowLeft, Info, FunctionSquare, Loader2 } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Info, FunctionSquare, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,7 @@ export default function LoanRequestPage() {
   const [amount, setAmount] = useState(5000);
   const [term, setTerm] = useState(1);
   const [purpose, setPurpose] = useState('');
+  const [loanerName, setLoanerName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const interestRate = 0.10;
@@ -27,6 +28,15 @@ export default function LoanRequestPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!loanerName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide the name of the loaner.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!purpose.trim()) {
       toast({
         title: "Validation Error",
@@ -42,7 +52,8 @@ export default function LoanRequestPage() {
     setTimeout(() => {
       const newLoan = {
         id: `l-user-${Date.now()}`,
-        memberId: 'm1', // Current member ID
+        memberId: 'm1', // Current member ID (John Doe in mock)
+        loanerName: loanerName,
         amount: amount,
         status: 'pending',
         requestDate: new Date().toISOString().split('T')[0],
@@ -92,6 +103,21 @@ export default function LoanRequestPage() {
               <CardDescription>Drag sliders to update values in the Formula Engine.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
+              <div className="space-y-2">
+                <Label htmlFor="loanerName">Full Name of Loaner</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="loanerName" 
+                    placeholder="Enter the full name of the loaner" 
+                    className="pl-10"
+                    value={loanerName}
+                    onChange={(e) => setLoanerName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <Label>Requested Amount (₱)</Label>

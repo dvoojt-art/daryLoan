@@ -43,7 +43,8 @@ import {
   Plus,
   AlertTriangle,
   Edit,
-  Trash2
+  Trash2,
+  User
 } from 'lucide-react';
 import {
   Dialog,
@@ -70,6 +71,7 @@ export default function MemberDashboard() {
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   const [editPurpose, setEditPurpose] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [editLoanerName, setEditLoanerName] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -116,6 +118,7 @@ export default function MemberDashboard() {
     setEditingLoan(loan);
     setEditPurpose(loan.purpose);
     setEditAmount(loan.amount.toString());
+    setEditLoanerName(loan.loanerName || '');
     setIsEditDialogOpen(true);
   };
 
@@ -135,7 +138,7 @@ export default function MemberDashboard() {
     // Update state
     const updatedLoans = loans.map(l => {
       if (l.id === editingLoan.id) {
-        return { ...l, purpose: editPurpose, amount: amountNum };
+        return { ...l, purpose: editPurpose, amount: amountNum, loanerName: editLoanerName };
       }
       return l;
     });
@@ -147,7 +150,7 @@ export default function MemberDashboard() {
     if (isLocal) {
       const updatedLocal = localLoans.map((l: Loan) => {
         if (l.id === editingLoan.id) {
-          return { ...l, purpose: editPurpose, amount: amountNum };
+          return { ...l, purpose: editPurpose, amount: amountNum, loanerName: editLoanerName };
         }
         return l;
       });
@@ -400,7 +403,7 @@ export default function MemberDashboard() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold">Purpose</TableHead>
+                  <TableHead className="font-bold">Loaner / Purpose</TableHead>
                   <TableHead className="font-bold">Status</TableHead>
                   <TableHead className="text-right font-bold">Principal</TableHead>
                   <TableHead className="text-right font-bold">Actions</TableHead>
@@ -409,12 +412,17 @@ export default function MemberDashboard() {
               <TableBody>
                 {loans.map((l) => (
                   <TableRow key={l.id}>
-                    <TableCell className="font-medium">{l.purpose}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-800">{l.loanerName || 'Self'}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge 
                         variant="outline" 
                         className={cn(
-                          "capitalize",
+                          "capitalize text-[10px]",
                           l.status === 'approved' && "bg-green-50 text-green-700 border-green-200",
                           l.status === 'pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
                           l.status === 'rejected' && "bg-red-50 text-red-700 border-red-200",
@@ -471,6 +479,18 @@ export default function MemberDashboard() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
+              <Label htmlFor="edit-loaner-name">Loaner Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="edit-loaner-name" 
+                  value={editLoanerName}
+                  className="pl-10"
+                  onChange={(e) => setEditLoanerName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
               <Input 
                 id="edit-amount" 
@@ -497,4 +517,3 @@ export default function MemberDashboard() {
     </div>
   );
 }
-

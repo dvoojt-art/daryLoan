@@ -16,7 +16,8 @@ import {
   ArrowUpDown,
   Filter,
   BrainCircuit,
-  Calendar
+  Calendar,
+  User
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { MOCK_LOANS, MOCK_MEMBERS, Loan } from '@/lib/mock-data';
@@ -35,7 +36,7 @@ export default function AdminLoanApprovals() {
     setMounted(true);
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const pendingMockLoans = MOCK_LOANS.filter(l => l.status === 'pending');
-    // In a real app, we'd fetch from a DB. For this prototype, we merge mock and local storage.
+    // Combine mock and local storage for prototype
     setLoans([...localLoans, ...pendingMockLoans]);
   }, []);
 
@@ -44,6 +45,7 @@ export default function AdminLoanApprovals() {
   const handleAction = (id: string, action: 'approved' | 'rejected') => {
     const loan = loans.find(l => l.id === id);
     const member = getMember(loan?.memberId || '');
+    const loanerName = loan?.loanerName || member?.name || 'Unknown';
     
     // Update local state
     setLoans(prev => prev.filter(l => l.id !== id));
@@ -59,19 +61,21 @@ export default function AdminLoanApprovals() {
 
     toast({
       title: `Loan ${action === 'approved' ? 'Approved' : 'Rejected'}`,
-      description: `${member?.name}'s request for ₱${loan?.amount.toLocaleString()} has been processed.`,
+      description: `${loanerName}'s request for ₱${loan?.amount.toLocaleString()} has been processed.`,
       variant: action === 'rejected' ? 'destructive' : 'default',
     });
   };
 
   const filteredLoans = loans.filter(l => {
     const member = getMember(l.memberId);
-    return member?.name.toLowerCase().includes(search.toLowerCase()) || 
-           l.purpose.toLowerCase().includes(search.toLowerCase());
+    return (member?.name.toLowerCase().includes(search.toLowerCase()) || 
+           (l.loanerName && l.loanerName.toLowerCase().includes(search.toLowerCase())) ||
+           l.purpose.toLowerCase().includes(search.toLowerCase()));
   });
 
   const selectedLoan = loans.find(l => l.id === selectedLoanId);
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
+  const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown';
 
   if (!mounted) return null;
 
@@ -99,7 +103,7 @@ export default function AdminLoanApprovals() {
               <div className="relative w-full sm:max-w-md">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by member name or purpose..."
+                  placeholder="Search by name or purpose..."
                   className="pl-10 h-10 border-slate-200"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -114,7 +118,7 @@ export default function AdminLoanApprovals() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold">Member Request</TableHead>
+                  <TableHead className="font-bold">Loaner / Member Account</TableHead>
                   <TableHead className="font-bold">Principal</TableHead>
                   <TableHead className="font-bold hidden md:table-cell">Request Date</TableHead>
                   <TableHead className="text-right font-bold">Actions</TableHead>
@@ -123,6 +127,7 @@ export default function AdminLoanApprovals() {
               <TableBody>
                 {filteredLoans.map((loan) => {
                   const member = getMember(loan.memberId);
+                  const loanerName = loan.loanerName || member?.name || 'Unknown';
                   const isSelected = selectedLoanId === loan.id;
                   
                   return (
@@ -138,11 +143,13 @@ export default function AdminLoanApprovals() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9 border border-slate-200">
                             <AvatarImage src={`https://picsum.photos/seed/${loan.memberId}/100/100`} />
-                            <AvatarFallback>{member?.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>{loanerName.substring(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col">
-                            <span className="font-bold text-slate-800">{member?.name}</span>
-                            <span className="text-xs text-muted-foreground truncate max-w-[150px]">{loan.purpose}</span>
+                            <span className="font-bold text-slate-800">{loanerName}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                              <User className="h-2 w-2" /> Member: {member?.name}
+                            </span>
                           </div>
                         </div>
                       </TableCell>
@@ -200,12 +207,23 @@ export default function AdminLoanApprovals() {
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-xl">Request Summary</CardTitle>
-                      <CardDescription className="text-slate-400">Reviewing details for {selectedMember?.name}</CardDescription>
+                      <CardDescription className="text-slate-400">Reviewing details for {selectedLoanerName}</CardDescription>
                     </div>
                     <Badge className="bg-primary text-white border-none">Pending Review</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
+                  <div className="p-4 bg-slate-50 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-muted-foreground uppercase">Loaner:</span>
+                      <span className="font-bold text-slate-800">{selectedLoanerName}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-muted-foreground uppercase">Account Holder:</span>
+                      <span className="font-bold text-slate-800">{selectedMember?.name}</span>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase font-bold text-muted-foreground">Principal Amount</p>

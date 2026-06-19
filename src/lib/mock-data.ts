@@ -14,6 +14,7 @@ export type Member = {
 export type Loan = {
   id: string;
   memberId: string;
+  loanerName?: string;
   amount: number;
   status: 'pending' | 'approved' | 'rejected' | 'repaid' | 'overdue';
   requestDate: string;
@@ -39,10 +40,10 @@ export const MOCK_MEMBERS: Member[] = [
 ];
 
 export const MOCK_LOANS: Loan[] = [
-  { id: 'l1', memberId: 'm1', amount: 2000, status: 'approved', requestDate: '2024-02-10', dueDate: '2024-04-10', interestRate: 0.10, termMonths: 12, purpose: 'Home Repair' },
-  { id: 'l2', memberId: 'm2', amount: 15000, status: 'pending', requestDate: '2024-03-01', interestRate: 0.10, termMonths: 24, purpose: 'Education' },
-  { id: 'l3', memberId: 'm3', amount: 500, status: 'rejected', requestDate: '2024-01-15', interestRate: 0.10, termMonths: 6, purpose: 'Emergency' },
-  { id: 'l4', memberId: 'm2', amount: 5000, status: 'overdue', requestDate: '2023-12-01', dueDate: '2024-03-01', interestRate: 0.10, termMonths: 12, purpose: 'Business Capital' },
+  { id: 'l1', memberId: 'm1', loanerName: 'John Doe', amount: 2000, status: 'approved', requestDate: '2024-02-10', dueDate: '2024-04-10', interestRate: 0.10, termMonths: 12, purpose: 'Home Repair' },
+  { id: 'l2', memberId: 'm2', loanerName: 'Jane Smith', amount: 15000, status: 'pending', requestDate: '2024-03-01', interestRate: 0.10, termMonths: 24, purpose: 'Education' },
+  { id: 'l3', memberId: 'm3', loanerName: 'Bob Wilson', amount: 500, status: 'rejected', requestDate: '2024-01-15', interestRate: 0.10, termMonths: 6, purpose: 'Emergency' },
+  { id: 'l4', memberId: 'm2', loanerName: 'Jane Smith', amount: 5000, status: 'overdue', requestDate: '2023-12-01', dueDate: '2024-03-01', interestRate: 0.10, termMonths: 12, purpose: 'Business Capital' },
 ];
 
 export const MOCK_CONTRIBUTIONS: Contribution[] = [

@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Zap,
   History,
-  CheckCircle2
+  CheckCircle2,
+  User
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_MEMBERS, Loan } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -217,6 +218,7 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             {recentActivity.map((loan) => {
               const member = MOCK_MEMBERS.find(m => m.id === loan.memberId);
+              const loanerName = loan.loanerName || member?.name || 'Unknown';
               return (
                 <div key={loan.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
                   <div className={cn(
@@ -234,7 +236,7 @@ export default function AdminDashboard() {
                   <div className="flex-1 space-y-1">
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-bold text-slate-800">
-                        {member?.name} 
+                        {loanerName} 
                         <span className="font-normal text-muted-foreground ml-1">
                           {loan.status === 'pending' ? 'submitted a request for' : 
                            loan.status === 'approved' ? 'loan agreement finalized for' : 
@@ -249,18 +251,11 @@ export default function AdminDashboard() {
                       <Badge variant="secondary" className="text-[9px] uppercase tracking-tighter h-4 px-2 font-bold">
                         {loan.purpose}
                       </Badge>
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          "text-[9px] uppercase font-bold h-4 px-2",
-                          loan.status === 'approved' && "bg-green-50 text-green-700 border-green-200",
-                          loan.status === 'pending' && "bg-yellow-50 text-yellow-700 border-yellow-200",
-                          loan.status === 'rejected' && "bg-red-50 text-red-700 border-red-200",
-                          loan.status === 'overdue' && "bg-destructive/10 text-destructive border-destructive/20"
-                        )}
-                      >
-                        {loan.status}
-                      </Badge>
+                      {loan.loanerName && member && loan.loanerName !== member.name && (
+                        <Badge variant="outline" className="text-[9px] uppercase h-4 px-2 border-slate-200">
+                          Account: {member.name}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
