@@ -155,11 +155,11 @@ export default function LoginPage() {
             </TabsContent>
           </Tabs>
           
-          <div className="px-6 pb-8 text-center">
-            <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+          <div className="px-6 py-8 text-center bg-[#010642]">
+            <p className="text-[10px] text-slate-400 leading-relaxed max-w-[280px] mx-auto">
               By logging in, you agree to our{' '}
-              <Link href="/terms" className="underline hover:text-primary">Terms of Service</Link> and{' '}
-              <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
+              <Link href="/terms" className="underline hover:text-white transition-colors">Terms of Service</Link> and{' '}
+              <Link href="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</Link>.
             </p>
           </div>
         </Card>
