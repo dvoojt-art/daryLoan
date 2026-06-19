@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,11 @@ export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Form State for new record
   const [newRecord, setNewRecord] = useState({
@@ -60,6 +65,17 @@ export default function AdminLedgerPage() {
     purpose: '',
     termMonths: '3',
   });
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
 
   // Initial data setup
   const initialLedgerData = useMemo(() => {
@@ -189,6 +205,8 @@ export default function AdminLedgerPage() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+
+  if (!mounted) return null;
 
   return (
     <div className="p-6 space-y-6">
@@ -323,7 +341,7 @@ export default function AdminLedgerPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-xs font-medium text-slate-600">
-                    {tx.requestDate}
+                    {formatDate(tx.requestDate)}
                   </TableCell>
                   <TableCell className="font-bold text-slate-800">
                     ₱{tx.amount.toLocaleString()}

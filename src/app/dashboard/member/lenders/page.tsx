@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -12,6 +13,17 @@ import { cn } from '@/lib/utils';
 
 export default function LendersDirectoryPage() {
   const [search, setSearch] = useState('');
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
 
   // Filter members (lenders) excluding admins for this view
   const lenders = MOCK_MEMBERS.filter(m => 
@@ -76,7 +88,7 @@ export default function LendersDirectoryPage() {
                       </TableCell>
                       <TableCell className="font-semibold text-slate-700">{lender.name}</TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{lender.email}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">{lender.joinDate}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">{formatDate(lender.joinDate)}</TableCell>
                       <TableCell className="text-right">
                         <Badge 
                           variant="outline" 

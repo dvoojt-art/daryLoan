@@ -35,6 +35,17 @@ export default function AdminDashboard() {
     setAllLoans([...localLoans, ...MOCK_LOANS]);
   }, []);
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
+
   if (!mounted) return null;
 
   const pendingLoans = allLoans.filter(l => l.status === 'pending');
@@ -244,7 +255,7 @@ export default function AdminDashboard() {
                            loan.status === 'rejected' ? 'loan request denied for' : 'repaid'}
                         </span>
                       </p>
-                      <span className="text-[10px] text-muted-foreground font-medium">{loan.requestDate}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium">{formatDate(loan.requestDate)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold text-primary">₱{loan.amount.toLocaleString()}</p>

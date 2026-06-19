@@ -41,6 +41,17 @@ export default function AdminLoanApprovals() {
     setLoans([...pendingLocalLoans, ...pendingMockLoans]);
   }, []);
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
+
   const getMember = (id: string) => MOCK_MEMBERS.find(m => m.id === id);
 
   const handleAction = (id: string, action: 'approved' | 'rejected') => {
@@ -166,7 +177,7 @@ export default function AdminLoanApprovals() {
                       <TableCell className="hidden md:table-cell">
                         <div className="flex items-center gap-2 text-muted-foreground text-xs">
                           <Calendar className="h-3 w-3" />
-                          {loan.requestDate}
+                          {formatDate(loan.requestDate)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
