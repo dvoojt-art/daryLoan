@@ -61,15 +61,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          <div className="h-16 flex items-center px-6 border-b">
+          <div className="h-16 flex items-center px-6 border-b bg-[#010642]">
             <Link href="/" className="flex items-center gap-2">
-              <Wallet className="h-6 w-6 text-primary" />
+              <Wallet className="h-6 w-6 text-accent" />
               <div className="flex flex-col -space-y-1">
                 <span className="font-headline text-xl">
-                  <span className="font-bold text-slate-800">Dary</span>
+                  <span className="font-bold text-white">Dary</span>
                   <span className="text-accent font-medium">Loan</span>
                 </span>
-                <span className="text-[10px] text-muted-foreground font-medium leading-none">Problema mo'y may solusyon!</span>
+                <span className="text-[10px] text-slate-300 font-medium leading-none">Problema mo'y may solusyon!</span>
               </div>
             </Link>
           </div>
