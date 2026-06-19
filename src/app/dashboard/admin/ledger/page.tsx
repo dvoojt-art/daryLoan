@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -219,6 +219,14 @@ export default function AdminLedgerPage() {
     (tx.loanerName && tx.loanerName.toLowerCase().includes(search.toLowerCase())) ||
     tx.purpose.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totals = useMemo(() => {
+    return filteredLedger.reduce((acc, curr) => ({
+      amount: acc.amount + curr.amount,
+      interest: acc.interest + curr.interest,
+      total: acc.total + curr.total,
+    }), { amount: 0, interest: 0, total: 0 });
+  }, [filteredLedger]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -467,6 +475,15 @@ export default function AdminLedgerPage() {
                 </TableRow>
               ))}
             </TableBody>
+            <TableFooter className="bg-slate-50/50 font-bold border-t-2">
+              <TableRow>
+                <TableCell colSpan={2} className="pl-4 py-4 text-slate-800 uppercase text-[11px] tracking-wider">Overall Totals</TableCell>
+                <TableCell className="text-slate-800 font-bold">₱{totals.amount.toLocaleString()}</TableCell>
+                <TableCell className="text-primary font-bold">₱{totals.interest.toLocaleString()}</TableCell>
+                <TableCell className="text-primary font-bold">₱{totals.total.toLocaleString()}</TableCell>
+                <TableCell colSpan={4}></TableCell>
+              </TableRow>
+            </TableFooter>
           </Table>
           {filteredLedger.length === 0 && (
             <div className="text-center py-20 bg-slate-50/50">
