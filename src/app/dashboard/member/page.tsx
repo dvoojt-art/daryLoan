@@ -45,6 +45,16 @@ import {
   Edit,
   Trash2
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS, Loan } from '@/lib/mock-data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -55,6 +65,12 @@ export default function MemberDashboard() {
   const [mounted, setMounted] = useState(false);
   const [loans, setLoans] = useState<Loan[]>([]);
   const memberId = 'm1';
+
+  // Edit State
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
+  const [editPurpose, setEditPurpose] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -70,27 +86,80 @@ export default function MemberDashboard() {
   };
 
   const handleDeleteLoan = (loanId: string) => {
-    // 1. Remove from local storage if it exists there
+    // 1. Check if it's a mock loan (can't delete from constant file, but can hide in session)
+    const isMock = MOCK_LOANS.some(l => l.id === loanId);
+    
+    // 2. Remove from local storage if it exists there
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const filteredLocal = localLoans.filter((l: Loan) => l.id !== loanId);
     localStorage.setItem('daryloan_user_loans', JSON.stringify(filteredLocal));
 
-    // 2. Update local state
+    // 3. Update local state
     setLoans(prev => prev.filter(l => l.id !== loanId));
 
     toast({
       title: "Request Removed",
-      description: "Your loan request has been successfully deleted from the portal.",
+      description: isMock ? "Demo record hidden for this session." : "Your loan request has been successfully deleted.",
       variant: "destructive",
     });
   };
 
   const handleEditLoan = (loan: Loan) => {
-    toast({
-      title: "Edit Request",
-      description: `Opening modification panel for "${loan.purpose}".`,
+    if (loan.status !== 'pending') {
+      toast({
+        title: "Cannot Edit",
+        description: "Only pending requests can be modified.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setEditingLoan(loan);
+    setEditPurpose(loan.purpose);
+    setEditAmount(loan.amount.toString());
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateLoan = () => {
+    if (!editingLoan) return;
+
+    const amountNum = parseFloat(editAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid positive number.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Update state
+    const updatedLoans = loans.map(l => {
+      if (l.id === editingLoan.id) {
+        return { ...l, purpose: editPurpose, amount: amountNum };
+      }
+      return l;
     });
-    // In a full implementation, this could redirect to /request with the loan ID
+
+    // Update local storage if applicable
+    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    const isLocal = localLoans.some((l: Loan) => l.id === editingLoan.id);
+    
+    if (isLocal) {
+      const updatedLocal = localLoans.map((l: Loan) => {
+        if (l.id === editingLoan.id) {
+          return { ...l, purpose: editPurpose, amount: amountNum };
+        }
+        return l;
+      });
+      localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
+    }
+
+    setLoans(updatedLoans);
+    setIsEditDialogOpen(false);
+    toast({
+      title: "Request Updated",
+      description: `Application for "${editPurpose}" updated to ₱${amountNum.toLocaleString()}.`,
+    });
   };
 
   if (!mounted) return null;
@@ -390,6 +459,42 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Loan Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Loan Request</DialogTitle>
+            <DialogDescription>
+              Modify your pending application details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
+              <Input 
+                id="edit-amount" 
+                type="number" 
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-purpose">Purpose</Label>
+              <Input 
+                id="edit-purpose" 
+                value={editPurpose}
+                onChange={(e) => setEditPurpose(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateLoan}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
