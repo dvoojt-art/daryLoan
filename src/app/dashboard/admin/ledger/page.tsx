@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { 
   Search, 
   Download,
   Filter,
-  ArrowUpRight,
-  TrendingUp,
   History,
   FileSpreadsheet,
   CheckCircle2,
-  Clock
+  Clock,
+  TrendingUp,
+  ChevronDown
 } from 'lucide-react';
 import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
@@ -24,26 +30,31 @@ import { cn } from '@/lib/utils';
 export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
 
-  const getMember = (id: string) => MOCK_MEMBERS.find(m => m.id === id);
+  // Initial data setup
+  const initialLedgerData = useMemo(() => {
+    return MOCK_LOANS.map(loan => {
+      const member = MOCK_MEMBERS.find(m => m.id === loan.memberId);
+      const interest = loan.amount * 0.10; // 10% interest rule
+      const total = loan.amount + (interest * loan.termMonths);
+      
+      return {
+        ...loan,
+        memberName: member?.name || 'Unknown',
+        memberEmail: member?.email || '',
+        interest,
+        total,
+        month1: loan.status === 'approved' || loan.status === 'repaid' ? 'paid' : 'pending',
+        month2: loan.status === 'repaid' ? 'paid' : loan.status === 'overdue' ? 'late' : 'pending',
+        month3: loan.status === 'repaid' ? 'paid' : 'pending',
+      };
+    }).sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
+  }, []);
 
-  // Combine data to simulate the Excel-style ledger from the screenshot
-  const ledgerData = MOCK_LOANS.map(loan => {
-    const member = getMember(loan.memberId);
-    const interest = loan.amount * 0.10; // 10% interest rule
-    const total = loan.amount + (interest * loan.termMonths);
-    
-    // Simulate collection statuses for 3 months as seen in the Excel sheet
-    return {
-      ...loan,
-      memberName: member?.name || 'Unknown',
-      memberEmail: member?.email || '',
-      interest,
-      total,
-      month1: loan.status === 'approved' || loan.status === 'repaid' ? 'paid' : 'pending',
-      month2: loan.status === 'repaid' ? 'paid' : loan.status === 'overdue' ? 'late' : 'pending',
-      month3: loan.status === 'repaid' ? 'paid' : 'pending',
-    };
-  }).sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
+  const [ledgerData, setLedgerData] = useState(initialLedgerData);
+
+  const handleStatusChange = (id: string, month: 'month1' | 'month2' | 'month3', newStatus: string) => {
+    setLedgerData(prev => prev.map(item => item.id === id ? { ...item, [month]: newStatus } : item));
+  };
 
   const filteredLedger = ledgerData.filter(tx => 
     tx.memberName.toLowerCase().includes(search.toLowerCase()) ||
@@ -57,6 +68,37 @@ export default function AdminLedgerPage() {
       default: return <Badge variant="outline" className="bg-slate-50 text-slate-400 border-slate-200 text-[10px] font-bold">PENDING</Badge>;
     }
   };
+
+  const StatusDropdown = ({ id, month, currentStatus }: { id: string, month: 'month1' | 'month2' | 'month3', currentStatus: string }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="focus:outline-none group flex items-center justify-center gap-1 mx-auto hover:opacity-80 transition-opacity">
+          {getStatusBadge(currentStatus)}
+          <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center" className="min-w-[100px]">
+        <DropdownMenuItem onClick={() => handleStatusChange(id, month, 'paid')}>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-xs font-bold">PAID</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleStatusChange(id, month, 'late')}>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-red-500" />
+            <span className="text-xs font-bold">LATE</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleStatusChange(id, month, 'pending')}>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-slate-300" />
+            <span className="text-xs font-bold">PENDING</span>
+          </div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -135,9 +177,15 @@ export default function AdminLedgerPage() {
                   <TableCell className="font-bold text-primary">
                     ₱{tx.total.toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-center">{getStatusBadge(tx.month1)}</TableCell>
-                  <TableCell className="text-center">{getStatusBadge(tx.month2)}</TableCell>
-                  <TableCell className="text-center">{getStatusBadge(tx.month3)}</TableCell>
+                  <TableCell className="text-center">
+                    <StatusDropdown id={tx.id} month="month1" currentStatus={tx.month1} />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <StatusDropdown id={tx.id} month="month2" currentStatus={tx.month2} />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <History className="h-4 w-4 text-muted-foreground" />
