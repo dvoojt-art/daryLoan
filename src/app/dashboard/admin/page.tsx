@@ -1,5 +1,7 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,19 +20,29 @@ import {
   History,
   CheckCircle2
 } from 'lucide-react';
-import { MOCK_LOANS, MOCK_MEMBERS } from '@/lib/mock-data';
-import { useState } from 'react';
+import { MOCK_LOANS, MOCK_MEMBERS, Loan } from '@/lib/mock-data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboard() {
-  const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
-  const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
+  const [mounted, setMounted] = useState(false);
+  const [allLoans, setAllLoans] = useState<Loan[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    setAllLoans([...localLoans, ...MOCK_LOANS]);
+  }, []);
+
+  if (!mounted) return null;
+
+  const pendingLoans = allLoans.filter(l => l.status === 'pending');
+  const overdueLoans = allLoans.filter(l => l.status === 'overdue');
   const newApplications = MOCK_MEMBERS.filter(m => m.status === 'pending');
-  const totalDisbursed = MOCK_LOANS.filter(l => l.status === 'approved' || l.status === 'overdue').reduce((acc, l) => acc + l.amount, 0);
+  const totalDisbursed = allLoans.filter(l => l.status === 'approved' || l.status === 'overdue' || l.status === 'repaid').reduce((acc, l) => acc + l.amount, 0);
   
   // Sort loans by date to show most recent activity
-  const recentActivity = [...MOCK_LOANS].sort((a, b) => 
+  const recentActivity = [...allLoans].sort((a, b) => 
     new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
   ).slice(0, 5);
 

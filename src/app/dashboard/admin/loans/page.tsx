@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -25,10 +25,19 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function AdminLoanApprovals() {
-  const [loans, setLoans] = useState<Loan[]>(MOCK_LOANS.filter(l => l.status === 'pending'));
+  const [loans, setLoans] = useState<Loan[]>([]);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setMounted(true);
+    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    const pendingMockLoans = MOCK_LOANS.filter(l => l.status === 'pending');
+    // In a real app, we'd fetch from a DB. For this prototype, we merge mock and local storage.
+    setLoans([...localLoans, ...pendingMockLoans]);
+  }, []);
 
   const getMember = (id: string) => MOCK_MEMBERS.find(m => m.id === id);
 
@@ -36,8 +45,17 @@ export default function AdminLoanApprovals() {
     const loan = loans.find(l => l.id === id);
     const member = getMember(loan?.memberId || '');
     
+    // Update local state
     setLoans(prev => prev.filter(l => l.id !== id));
     if (selectedLoanId === id) setSelectedLoanId(null);
+
+    // Update localStorage if it was a user-created loan
+    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    const updatedLocal = localLoans.map((l: Loan) => {
+      if (l.id === id) return { ...l, status: action };
+      return l;
+    }).filter((l: Loan) => l.status === 'pending'); // Keep only pending in the approval queue
+    localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
 
     toast({
       title: `Loan ${action === 'approved' ? 'Approved' : 'Rejected'}`,
@@ -54,6 +72,8 @@ export default function AdminLoanApprovals() {
 
   const selectedLoan = loans.find(l => l.id === selectedLoanId);
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
+
+  if (!mounted) return null;
 
   return (
     <div className="p-6 space-y-6">
@@ -206,11 +226,11 @@ export default function AdminLoanApprovals() {
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Member Financial Snapshot</p>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Total Contributions:</span>
-                      <span className="font-bold">₱{selectedMember?.totalContributions.toLocaleString()}</span>
+                      <span className="font-bold">₱{selectedMember?.totalContributions.toLocaleString() || 0}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Current Shares:</span>
-                      <span className="font-bold">₱{selectedMember?.shares.toLocaleString()}</span>
+                      <span className="font-bold">₱{selectedMember?.shares.toLocaleString() || 0}</span>
                     </div>
                   </div>
                 </CardContent>
