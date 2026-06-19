@@ -76,6 +76,18 @@ export default function MemberDashboard() {
   const [editLoanerName, setEditLoanerName] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Date formatter helper: MMM-DD-YYYY
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
+
   useEffect(() => {
     setMounted(true);
     refreshLoans();
@@ -222,7 +234,7 @@ export default function MemberDashboard() {
             <AlertTitle className="font-bold">Loan Application Approved</AlertTitle>
             <AlertDescription className="text-sm">
               Your loan request for ₱{activeLoan.amount.toLocaleString()} has been approved! {activeLoan.dueDate && (
-                <>Your first payment is scheduled for <span className="font-bold underline">{activeLoan.dueDate}</span>.</>
+                <>Your first payment is scheduled for <span className="font-bold underline">{formatDate(activeLoan.dueDate)}</span>.</>
               )}
             </AlertDescription>
           </Alert>
@@ -330,7 +342,7 @@ export default function MemberDashboard() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Next Due</p>
-                    <p className="text-sm font-semibold">{activeLoan.dueDate || 'N/A'}</p>
+                    <p className="text-sm font-semibold">{formatDate(activeLoan.dueDate) || 'N/A'}</p>
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Remaining</p>
