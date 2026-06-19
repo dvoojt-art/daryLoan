@@ -43,7 +43,8 @@ import {
   Trash2,
   Plus,
   MessageSquareText,
-  AlertCircle
+  AlertCircle,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -119,6 +120,9 @@ export default function AdminLedgerPage() {
         month1,
         month2,
         month3,
+        month1Date: '',
+        month2Date: '',
+        month3Date: '',
       };
     }).sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
   }, []);
@@ -145,6 +149,15 @@ export default function AdminLedgerPage() {
         }
         
         return { ...updatedItem, total: newTotal };
+      }
+      return item;
+    }));
+  };
+
+  const handleDateChange = (id: string, monthKey: 'month1Date' | 'month2Date' | 'month3Date', newDate: string) => {
+    setLedgerData(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [monthKey]: newDate };
       }
       return item;
     }));
@@ -243,6 +256,9 @@ export default function AdminLedgerPage() {
       month1: 'pending',
       month2: 'pending',
       month3: 'pending',
+      month1Date: '',
+      month2Date: '',
+      month3Date: '',
       adminNote: newRecord.adminNote,
     };
 
@@ -451,7 +467,6 @@ export default function AdminLedgerPage() {
             <TableBody>
               {filteredLedger.map((tx) => {
                 // Check if any month is late to show a penalty warning
-                const isLate = tx.month1 === 'late' || tx.month2 === 'late' || tx.month3 === 'late';
                 const baseInterest = tx.amount * 0.10;
                 const baseTotal = tx.amount + (baseInterest * tx.termMonths);
                 const hasPenalty = tx.total > baseTotal;
@@ -502,13 +517,40 @@ export default function AdminLedgerPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <StatusDropdown id={tx.id} month="month1" currentStatus={tx.month1} />
+                      <div className="flex flex-col items-center gap-1.5">
+                        <StatusDropdown id={tx.id} month="month1" currentStatus={tx.month1} />
+                        <Input 
+                          type="text"
+                          placeholder="Set Date"
+                          className="h-6 w-20 text-[9px] text-center border-none bg-slate-50 hover:bg-slate-100 focus:bg-white px-1 shadow-none"
+                          value={tx.month1Date}
+                          onChange={(e) => handleDateChange(tx.id, 'month1Date', e.target.value)}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <StatusDropdown id={tx.id} month="month2" currentStatus={tx.month2} />
+                      <div className="flex flex-col items-center gap-1.5">
+                        <StatusDropdown id={tx.id} month="month2" currentStatus={tx.month2} />
+                        <Input 
+                          type="text"
+                          placeholder="Set Date"
+                          className="h-6 w-20 text-[9px] text-center border-none bg-slate-50 hover:bg-slate-100 focus:bg-white px-1 shadow-none"
+                          value={tx.month2Date}
+                          onChange={(e) => handleDateChange(tx.id, 'month2Date', e.target.value)}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
+                      <div className="flex flex-col items-center gap-1.5">
+                        <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
+                        <Input 
+                          type="text"
+                          placeholder="Set Date"
+                          className="h-6 w-20 text-[9px] text-center border-none bg-slate-50 hover:bg-slate-100 focus:bg-white px-1 shadow-none"
+                          value={tx.month3Date}
+                          onChange={(e) => handleDateChange(tx.id, 'month3Date', e.target.value)}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
