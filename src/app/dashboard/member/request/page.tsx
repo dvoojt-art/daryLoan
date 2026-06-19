@@ -10,9 +10,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ExcelFormulaInput } from '@/components/ExcelFormulaInput';
-import { ShieldCheck, ArrowLeft, Info, FunctionSquare, Loader2, User } from 'lucide-react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  ShieldCheck, 
+  ArrowLeft, 
+  Info, 
+  FunctionSquare, 
+  Loader2, 
+  User,
+  Users
+} from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_MEMBERS } from '@/lib/mock-data';
 
 export default function LoanRequestPage() {
   const router = useRouter();
@@ -20,6 +36,7 @@ export default function LoanRequestPage() {
   const [term, setTerm] = useState(1);
   const [purpose, setPurpose] = useState('');
   const [loanerName, setLoanerName] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState('m1');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const interestRate = 0.10;
@@ -28,6 +45,15 @@ export default function LoanRequestPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!selectedMemberId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a member account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!loanerName.trim()) {
       toast({
         title: "Validation Error",
@@ -50,9 +76,11 @@ export default function LoanRequestPage() {
 
     // Simulate submission process and save to localStorage for prototype persistence
     setTimeout(() => {
+      const selectedMember = MOCK_MEMBERS.find(m => m.id === selectedMemberId);
+      
       const newLoan = {
         id: `l-user-${Date.now()}`,
-        memberId: 'm1', // Current member ID (John Doe in mock)
+        memberId: selectedMemberId,
         loanerName: loanerName,
         amount: amount,
         status: 'pending',
@@ -69,7 +97,7 @@ export default function LoanRequestPage() {
       setIsSubmitting(false);
       toast({
         title: "Application Submitted",
-        description: `Your request for ₱${amount.toLocaleString()} has been sent for admin review.`,
+        description: `Request for ₱${amount.toLocaleString()} on behalf of ${selectedMember?.name} has been sent for admin review.`,
       });
       
       router.push('/dashboard/member');
@@ -100,22 +128,47 @@ export default function LoanRequestPage() {
           <form onSubmit={handleSubmit}>
             <CardHeader>
               <CardTitle>Loan Details</CardTitle>
-              <CardDescription>Drag sliders to update values in the Formula Engine.</CardDescription>
+              <CardDescription>Specify the member and loaner details for this request.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
+              <div className="space-y-2">
+                <Label htmlFor="memberSelect">Full Name of the Member</Label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                  <Select 
+                    defaultValue="m1" 
+                    onValueChange={(val) => setSelectedMemberId(val)}
+                  >
+                    <SelectTrigger id="memberSelect" className="pl-10">
+                      <SelectValue placeholder="Select a member account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOCK_MEMBERS.filter(m => m.role === 'member').map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="loanerName">Full Name of Loaner</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input 
                     id="loanerName" 
-                    placeholder="Enter the full name of the loaner" 
+                    placeholder="Enter the full name of the actual loaner" 
                     className="pl-10"
                     value={loanerName}
                     onChange={(e) => setLoanerName(e.target.value)}
                     required
                   />
                 </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  * If the member is requesting for themselves, enter the member's name again here.
+                </p>
               </div>
 
               <div className="space-y-4">
@@ -207,10 +260,10 @@ export default function LoanRequestPage() {
             <CardContent>
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your current contribution consistency is high. Approval probability calculated via logic:
+                  Member contribution consistency is evaluated for instant probability.
                 </p>
                 <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500">
-                  =IF(CONSISTENCY &gt; 0.8, "85%", "Review")
+                  =IF(ACCOUNT_CONSISTENCY > 0.8, "85%", "Review")
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700">Result:</span>
