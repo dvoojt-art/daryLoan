@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -37,6 +36,7 @@ export default function AdminMembersManagement() {
   const [members, setMembers] = useState<Member[]>(MOCK_MEMBERS.filter(m => m.role === 'member'));
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [newMember, setNewMember] = useState({
     name: '',
     email: '',
@@ -44,6 +44,10 @@ export default function AdminMembersManagement() {
     contributions: '',
   });
   const { toast } = useToast();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleEdit = (member: Member) => {
     toast({
@@ -98,7 +102,6 @@ export default function AdminMembersManagement() {
     m.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Calculate totals for the footer
   const totals = useMemo(() => {
     return filteredMembers.reduce((acc, m) => ({
       shares: acc.shares + m.shares,
@@ -119,68 +122,70 @@ export default function AdminMembersManagement() {
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
           
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary h-10 shadow-md">
-                <UserPlus className="mr-2 h-4 w-4" /> Add New Member
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Register New Member</DialogTitle>
-                <DialogDescription>
-                  Enter the details for the new community member.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="e.g. Maria Clara"
-                    value={newMember.name}
-                    onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input 
-                    id="email" 
-                    type="email"
-                    placeholder="maria@example.com"
-                    value={newMember.email}
-                    onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+          {mounted && (
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary h-10 shadow-md">
+                  <UserPlus className="mr-2 h-4 w-4" /> Add New Member
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Register New Member</DialogTitle>
+                  <DialogDescription>
+                    Enter the details for the new community member.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="shares">Shares (₱)</Label>
+                    <Label htmlFor="name">Full Name</Label>
                     <Input 
-                      id="shares" 
-                      type="number"
-                      placeholder="0"
-                      value={newMember.shares}
-                      onChange={(e) => setNewMember({ ...newMember, shares: e.target.value })}
+                      id="name" 
+                      placeholder="e.g. Maria Clara"
+                      value={newMember.name}
+                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="contributions">Contributions (₱)</Label>
+                    <Label htmlFor="email">Email Address</Label>
                     <Input 
-                      id="contributions" 
-                      type="number"
-                      placeholder="0"
-                      value={newMember.contributions}
-                      onChange={(e) => setNewMember({ ...newMember, contributions: e.target.value })}
+                      id="email" 
+                      type="email"
+                      placeholder="maria@example.com"
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="shares">Shares (₱)</Label>
+                      <Input 
+                        id="shares" 
+                        type="number"
+                        placeholder="0"
+                        value={newMember.shares}
+                        onChange={(e) => setNewMember({ ...newMember, shares: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="contributions">Contributions (₱)</Label>
+                      <Input 
+                        id="contributions" 
+                        type="number"
+                        placeholder="0"
+                        value={newMember.contributions}
+                        onChange={(e) => setNewMember({ ...newMember, contributions: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleAddMember}>Add Member</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleAddMember}>Add Member</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 

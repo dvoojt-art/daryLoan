@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -33,10 +33,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isAdmin = pathname.includes('/admin');
 
-  // Notification logic
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
   const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
   const pendingMembers = MOCK_MEMBERS.filter(m => m.status === 'pending');
@@ -120,7 +124,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
@@ -128,7 +131,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* Sidebar */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 w-64 bg-[#010642] border-r border-white/10 transform transition-transform duration-200 ease-in-out lg:relative lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -189,7 +191,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-16 flex items-center justify-between px-6 bg-white border-b lg:bg-transparent lg:border-none">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
@@ -197,98 +198,100 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Button>
           
           <div className="ml-auto flex items-center gap-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground relative">
-                  <Bell className="h-5 w-5" />
-                  {notificationCount > 0 && (
-                    <span className="absolute top-2 right-2 h-4 w-4 bg-destructive text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-                      {notificationCount}
-                    </span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="end">
-                <div className="p-4 border-b bg-slate-50/50">
-                  <h3 className="font-bold text-sm">Notifications</h3>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
-                    {notificationCount} {notificationCount === 1 ? 'Alert' : 'Alerts'} Requiring Action
-                  </p>
-                </div>
-                <ScrollArea className="h-[350px]">
-                  {activeNotifications.length > 0 ? (
-                    <div className="flex flex-col">
-                      {activeNotifications.map((n) => (
-                        <div key={n.id} className="relative group/notify">
-                          <Link 
-                            href={n.href}
-                            className="flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors border-b last:border-0 pr-10"
-                          >
-                            <div className={cn(
-                              "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
-                              n.category === 'due' 
-                                ? "bg-red-50 text-red-600 border-red-100" 
-                                : "bg-blue-50 text-blue-600 border-blue-100"
-                            )}>
-                              <n.icon className="h-4 w-4" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs font-bold leading-none">{n.title}</p>
-                              <p className="text-[11px] text-muted-foreground leading-relaxed">{n.description}</p>
-                              <div className="pt-1">
-                                <span className={cn(
-                                  "text-[9px] uppercase font-bold px-1.5 py-0.5 rounded",
-                                  n.category === 'due' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                                )}>
-                                  {n.category}
-                                </span>
-                              </div>
-                            </div>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 top-4 h-6 w-6 opacity-0 group-hover/notify:opacity-100 transition-opacity hover:bg-slate-200"
-                            onClick={(e) => handleDismiss(n.id, e)}
-                          >
-                            <X className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                      <div className="bg-slate-100 p-3 rounded-full mb-3">
-                        <Bell className="h-6 w-6 text-slate-400" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-500">No new notifications</p>
-                    </div>
-                  )}
-                </ScrollArea>
-                {activeNotifications.length > 0 && (
-                  <div className="p-2 bg-slate-50/50 border-t flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="flex-1 text-[11px] font-bold text-slate-500 hover:bg-slate-100"
-                      onClick={handleClearAll}
-                    >
-                      Clear All
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="flex-1 text-[11px] font-bold text-primary hover:bg-primary/5"
-                      asChild
-                    >
-                      <Link href={isAdmin ? "/dashboard/admin/ledger" : "/dashboard/member"}>
-                        View All
-                      </Link>
-                    </Button>
+            {mounted && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground relative">
+                    <Bell className="h-5 w-5" />
+                    {notificationCount > 0 && (
+                      <span className="absolute top-2 right-2 h-4 w-4 bg-destructive text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                        {notificationCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-4 border-b bg-slate-50/50">
+                    <h3 className="font-bold text-sm">Notifications</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
+                      {notificationCount} {notificationCount === 1 ? 'Alert' : 'Alerts'} Requiring Action
+                    </p>
                   </div>
-                )}
-              </PopoverContent>
-            </Popover>
+                  <ScrollArea className="h-[350px]">
+                    {activeNotifications.length > 0 ? (
+                      <div className="flex flex-col">
+                        {activeNotifications.map((n) => (
+                          <div key={n.id} className="relative group/notify">
+                            <Link 
+                              href={n.href}
+                              className="flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors border-b last:border-0 pr-10"
+                            >
+                              <div className={cn(
+                                "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
+                                n.category === 'due' 
+                                  ? "bg-red-50 text-red-600 border-red-100" 
+                                  : "bg-blue-50 text-blue-600 border-blue-100"
+                              )}>
+                                <n.icon className="h-4 w-4" />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold leading-none">{n.title}</p>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">{n.description}</p>
+                                <div className="pt-1">
+                                  <span className={cn(
+                                    "text-[9px] uppercase font-bold px-1.5 py-0.5 rounded",
+                                    n.category === 'due' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                  )}>
+                                    {n.category}
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-2 top-4 h-6 w-6 opacity-0 group-hover/notify:opacity-100 transition-opacity hover:bg-slate-200"
+                              onClick={(e) => handleDismiss(n.id, e)}
+                            >
+                              <X className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                        <div className="bg-slate-100 p-3 rounded-full mb-3">
+                          <Bell className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p className="text-sm font-medium text-slate-500">No new notifications</p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                  {activeNotifications.length > 0 && (
+                    <div className="p-2 bg-slate-50/50 border-t flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="flex-1 text-[11px] font-bold text-slate-500 hover:bg-slate-100"
+                        onClick={handleClearAll}
+                      >
+                        Clear All
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="flex-1 text-[11px] font-bold text-primary hover:bg-primary/5"
+                        asChild
+                      >
+                        <Link href={isAdmin ? "/dashboard/admin/ledger" : "/dashboard/member"}>
+                          View All
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
             
             <div className="h-8 w-px bg-border mx-2" />
             <div className="hidden sm:block text-right">

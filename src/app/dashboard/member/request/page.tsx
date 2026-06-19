@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -8,22 +9,44 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ExcelFormulaInput } from '@/components/ExcelFormulaInput';
-import { ShieldCheck, ArrowLeft, Info, FunctionSquare } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Info, FunctionSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoanRequestPage() {
+  const router = useRouter();
   const [amount, setAmount] = useState(5000);
-  const [term, setTerm] = useState(1); // Default to 1 month
-  const interestRate = 0.10; // 10% monthly interest (periodic rate)
+  const [term, setTerm] = useState(1);
+  const [purpose, setPurpose] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const interestRate = 0.10;
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Application Submitted",
-      description: "Your loan request is now pending admin review.",
-    });
+    
+    if (!purpose.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide a purpose for your loan request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Simulate submission process
+    setTimeout(() => {
+      setIsSubmitting(false);
+      toast({
+        title: "Application Submitted",
+        description: `Your request for ₱${amount.toLocaleString()} has been sent for admin review.`,
+      });
+      
+      router.push('/dashboard/member');
+    }, 1500);
   };
 
   const formatTerm = (val: number) => {
@@ -46,7 +69,6 @@ export default function LoanRequestPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Form Section */}
         <Card className="lg:col-span-2 border-none shadow-sm">
           <form onSubmit={handleSubmit}>
             <CardHeader>
@@ -96,17 +118,30 @@ export default function LoanRequestPage() {
                   id="purpose" 
                   placeholder="e.g., Home renovation, education fees, emergency medical expense..." 
                   className="min-h-[100px]"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  required
                 />
               </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-3 border-t pt-6">
-              <Button type="button" variant="ghost">Cancel</Button>
-              <Button type="submit" className="bg-primary shadow-md">Submit Application</Button>
+              <Button type="button" variant="ghost" asChild disabled={isSubmitting}>
+                <Link href="/dashboard/member">Cancel</Link>
+              </Button>
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-white font-bold shadow-md min-w-[140px]" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Application'
+                )}
+              </Button>
             </CardFooter>
           </form>
         </Card>
 
-        {/* Calculation Preview Section */}
         <div className="space-y-6">
           <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest mb-2">
             <FunctionSquare className="h-4 w-4" />
