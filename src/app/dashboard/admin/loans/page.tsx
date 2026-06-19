@@ -36,9 +36,15 @@ export default function AdminLoanApprovals() {
   useEffect(() => {
     setMounted(true);
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    const pendingLocalLoans = localLoans.filter((l: Loan) => l.status === 'pending');
-    const pendingMockLoans = MOCK_LOANS.filter(l => l.status === 'pending');
-    setLoans([...pendingLocalLoans, ...pendingMockLoans]);
+    
+    // Deduplicate logic: prefer localLoans over MOCK_LOANS
+    const localIds = new Set(localLoans.map((l: Loan) => l.id));
+    const uniqueMockLoans = MOCK_LOANS.filter(l => !localIds.has(l.id));
+    
+    const combinedLoans = [...localLoans, ...uniqueMockLoans];
+    const pendingLoans = combinedLoans.filter((l: Loan) => l.status === 'pending');
+    
+    setLoans(pendingLoans);
   }, []);
 
   const formatDate = (dateStr?: string) => {

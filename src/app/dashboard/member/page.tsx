@@ -93,7 +93,12 @@ export default function MemberDashboard() {
   const refreshLoans = () => {
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const myMockLoans = MOCK_LOANS.filter(l => l.memberId === memberId);
-    setLoans([...localLoans, ...myMockLoans].sort((a, b) => 
+    
+    // Deduplicate: prefer localLoans over myMockLoans
+    const localIds = new Set(localLoans.map((l: Loan) => l.id));
+    const uniqueMockLoans = myMockLoans.filter(l => !localIds.has(l.id));
+    
+    setLoans([...localLoans, ...uniqueMockLoans].sort((a, b) => 
       new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
     ));
   };

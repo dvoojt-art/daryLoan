@@ -32,7 +32,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     setMounted(true);
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    setAllLoans([...localLoans, ...MOCK_LOANS]);
+    
+    // Deduplicate: prefer localLoans (user actions) over MOCK_LOANS if IDs match
+    const localIds = new Set(localLoans.map((l: Loan) => l.id));
+    const uniqueMockLoans = MOCK_LOANS.filter(l => !localIds.has(l.id));
+    
+    setAllLoans([...localLoans, ...uniqueMockLoans]);
   }, []);
 
   const formatDate = (dateStr?: string) => {
