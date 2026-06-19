@@ -418,7 +418,7 @@ export default function AdminLedgerPage() {
                           )}
                         </div>
                         {tx.loanerName && tx.loanerName !== tx.memberName && (
-                          <span className="text-[9px] text-primary italic">Loaner: {tx.loanerName}</span>
+                          <span className="text-xs text-primary italic font-medium">Loaner: {tx.loanerName}</span>
                         )}
                       </div>
                     </div>
