@@ -41,7 +41,9 @@ import {
   FileText,
   FileJson,
   Plus,
-  AlertTriangle
+  AlertTriangle,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { MOCK_LOANS, MOCK_CONTRIBUTIONS, Loan } from '@/lib/mock-data';
 import Link from 'next/link';
@@ -56,13 +58,40 @@ export default function MemberDashboard() {
 
   useEffect(() => {
     setMounted(true);
-    // Combine mock loans with any locally submitted ones
+    refreshLoans();
+  }, []);
+
+  const refreshLoans = () => {
     const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
     const myMockLoans = MOCK_LOANS.filter(l => l.memberId === memberId);
     setLoans([...localLoans, ...myMockLoans].sort((a, b) => 
       new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
     ));
-  }, []);
+  };
+
+  const handleDeleteLoan = (loanId: string) => {
+    // 1. Remove from local storage if it exists there
+    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
+    const filteredLocal = localLoans.filter((l: Loan) => l.id !== loanId);
+    localStorage.setItem('daryloan_user_loans', JSON.stringify(filteredLocal));
+
+    // 2. Update local state
+    setLoans(prev => prev.filter(l => l.id !== loanId));
+
+    toast({
+      title: "Request Removed",
+      description: "Your loan request has been successfully deleted from the portal.",
+      variant: "destructive",
+    });
+  };
+
+  const handleEditLoan = (loan: Loan) => {
+    toast({
+      title: "Edit Request",
+      description: `Opening modification panel for "${loan.purpose}".`,
+    });
+    // In a full implementation, this could redirect to /request with the loan ID
+  };
 
   if (!mounted) return null;
 
@@ -305,6 +334,7 @@ export default function MemberDashboard() {
                   <TableHead className="font-bold">Purpose</TableHead>
                   <TableHead className="font-bold">Status</TableHead>
                   <TableHead className="text-right font-bold">Principal</TableHead>
+                  <TableHead className="text-right font-bold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -326,11 +356,31 @@ export default function MemberDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-bold text-slate-700">₱{l.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
+                          onClick={() => handleEditLoan(l)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
+                          onClick={() => handleDeleteLoan(l.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {loans.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground italic">
+                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground italic">
                       No loan history found.
                     </TableCell>
                   </TableRow>
