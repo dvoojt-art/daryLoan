@@ -1,18 +1,13 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { 
   ChartContainer, 
   ChartTooltip, 
@@ -28,24 +23,16 @@ import {
 } from 'recharts';
 import { 
   CreditCard, 
-  Calendar, 
-  Info, 
+  TrendingUp, 
+  AlertCircle, 
+  Clock, 
+  Plus, 
+  AlertTriangle, 
+  Edit, 
+  Trash2, 
+  MessageSquareText,
   History,
-  TrendingUp,
-  AlertCircle,
-  Clock,
-  Download,
-  FileSpreadsheet,
-  FileText,
-  FileJson,
-  Plus,
-  AlertTriangle,
-  Edit,
-  Trash2,
-  User,
-  CheckCircle2,
-  XCircle,
-  MessageSquareText
+  Loader2
 } from 'lucide-react';
 import {
   Dialog,
@@ -57,22 +44,42 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { MOCK_LOANS, MOCK_CONTRIBUTIONS, Loan } from '@/lib/mock-data';
+import { MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function MemberDashboard() {
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const memberId = 'm1';
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
+  const [editingLoan, setEditingLoan] = useState<any | null>(null);
   const [editPurpose, setEditPurpose] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editLoanerName, setEditLoanerName] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Real-time Loans Query
+  const loansQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'loans'),
+      where('memberId', '==', user.uid),
+      orderBy('requestDate', 'desc')
+    );
+  }, [firestore, user]);
+
+  const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -85,39 +92,26 @@ export default function MemberDashboard() {
     return `${month}-${day}-${year}`;
   };
 
-  useEffect(() => {
-    setMounted(true);
-    refreshLoans();
-  }, []);
-
-  const refreshLoans = () => {
-    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    const myMockLoans = MOCK_LOANS.filter(l => l.memberId === memberId);
-    
-    // Deduplicate: prefer localLoans over myMockLoans
-    const localIds = new Set(localLoans.map((l: Loan) => l.id));
-    const uniqueMockLoans = myMockLoans.filter(l => !localIds.has(l.id));
-    
-    setLoans([...localLoans, ...uniqueMockLoans].sort((a, b) => 
-      new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime()
-    ));
-  };
-
   const handleDeleteLoan = (loanId: string) => {
-    const isMock = MOCK_LOANS.some(l => l.id === loanId);
-    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    const filteredLocal = localLoans.filter((l: Loan) => l.id !== loanId);
-    localStorage.setItem('daryloan_user_loans', JSON.stringify(filteredLocal));
-    setLoans(prev => prev.filter(l => l.id !== loanId));
+    if (!firestore) return;
+    const loanRef = doc(firestore, 'loans', loanId);
+    
+    deleteDoc(loanRef).catch(async (e) => {
+      const error = new FirestorePermissionError({
+        path: loanRef.path,
+        operation: 'delete'
+      });
+      errorEmitter.emit('permission-error', error);
+    });
 
     toast({
       title: "Request Removed",
-      description: isMock ? "Demo record hidden for this session." : "Your loan request has been successfully deleted.",
+      description: "Your loan request has been successfully deleted.",
       variant: "destructive",
     });
   };
 
-  const handleEditLoan = (loan: Loan) => {
+  const handleEditLoan = (loan: any) => {
     if (loan.status !== 'pending') {
       toast({
         title: "Cannot Edit",
@@ -134,43 +128,39 @@ export default function MemberDashboard() {
   };
 
   const handleUpdateLoan = () => {
-    if (!editingLoan) return;
+    if (!editingLoan || !firestore) return;
     const amountNum = parseFloat(editAmount);
     if (isNaN(amountNum) || amountNum <= 0) return;
 
-    const updatedLoans = loans.map(l => {
-      if (l.id === editingLoan.id) {
-        return { ...l, purpose: editPurpose, amount: amountNum, loanerName: editLoanerName };
-      }
-      return l;
+    const loanRef = doc(firestore, 'loans', editingLoan.id);
+    const updateData = {
+      purpose: editPurpose,
+      amount: amountNum,
+      loanerName: editLoanerName
+    };
+
+    updateDoc(loanRef, updateData).catch(async (e) => {
+      const error = new FirestorePermissionError({
+        path: loanRef.path,
+        operation: 'update',
+        requestResourceData: updateData
+      });
+      errorEmitter.emit('permission-error', error);
     });
 
-    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    const isLocal = localLoans.some((l: Loan) => l.id === editingLoan.id);
-    
-    if (isLocal) {
-      const updatedLocal = localLoans.map((l: Loan) => {
-        if (l.id === editingLoan.id) {
-          return { ...l, purpose: editPurpose, amount: amountNum, loanerName: editLoanerName };
-        }
-        return l;
-      });
-      localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
-    }
-
-    setLoans(updatedLoans);
     setIsEditDialogOpen(false);
     toast({ title: "Request Updated" });
   };
 
   if (!mounted) return null;
 
-  const myContributions = MOCK_CONTRIBUTIONS.filter(c => c.memberId === memberId);
+  // For the prototype, we still use mock contributions as they represent historical growth
+  const myContributions = MOCK_CONTRIBUTIONS.filter(c => c.memberId === 'm1');
   const totalContributed = myContributions.reduce((acc, c) => acc + c.amount, 0);
   
-  const activeLoan = loans.find(l => l.status === 'approved');
-  const overdueLoan = loans.find(l => l.status === 'overdue');
-  const recentlyDecisioned = loans.find(l => (l.status === 'approved' || l.status === 'rejected') && l.adminNote);
+  const activeLoan = loans?.find(l => l.status === 'approved');
+  const overdueLoan = loans?.find(l => l.status === 'overdue');
+  const recentlyDecisioned = loans?.find(l => (l.status === 'approved' || l.status === 'rejected') && l.adminNote);
 
   const chartData = myContributions.map(c => ({
     date: c.date,
@@ -253,11 +243,15 @@ export default function MemberDashboard() {
             <CreditCard className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            {activeLoan ? (
+            {loansLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              </div>
+            ) : activeLoan ? (
               <div className="space-y-6">
                 <div>
                   <div className="text-3xl font-headline font-bold text-slate-800">₱{activeLoan.amount.toLocaleString()}</div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none mt-1">Status: {activeLoan.status}</Badge>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none mt-1 uppercase">Status: {activeLoan.status}</Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-medium"><span>Repayment</span><span>40%</span></div>
@@ -266,7 +260,7 @@ export default function MemberDashboard() {
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t text-xs">
                   <div>
                     <p className="uppercase font-bold text-muted-foreground text-[9px]">Due Date</p>
-                    <p className="font-semibold">{formatDate(activeLoan.dueDate)}</p>
+                    <p className="font-semibold">{formatDate(activeLoan.dueDate) || 'Pending'}</p>
                   </div>
                   <div className="text-right">
                     <p className="uppercase font-bold text-muted-foreground text-[9px]">Term Remaining</p>
@@ -289,61 +283,69 @@ export default function MemberDashboard() {
         <Card className="border-none shadow-sm bg-white">
           <CardHeader>
             <CardTitle className="text-lg">Request History</CardTitle>
-            <CardDescription>Status and admin release notes.</CardDescription>
+            <CardDescription>Real-time status and admin release notes.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold">Loaner / Purpose</TableHead>
-                  <TableHead className="font-bold">Status</TableHead>
-                  <TableHead className="font-bold">Date</TableHead>
-                  <TableHead className="text-right font-bold">Principal</TableHead>
-                  <TableHead className="text-right font-bold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loans.map((l) => (
-                  <TableRow key={l.id} className="group transition-colors border-b">
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-xs">{l.loanerName || 'Self'}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
-                        {l.adminNote && (
-                          <div className="mt-1 flex items-start gap-1 bg-primary/5 p-1 rounded border border-primary/10">
-                            <MessageSquareText className="h-2 w-2 text-primary mt-0.5 shrink-0" />
-                            <span className="text-[9px] text-primary italic font-medium leading-tight">Note: {l.adminNote}</span>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn(
-                        "capitalize text-[9px] font-bold",
-                        l.status === 'approved' ? "bg-green-50 text-green-700" : 
-                        l.status === 'pending' ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"
-                      )}>
-                        {l.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-[10px] text-muted-foreground">{formatDate(l.requestDate)}</TableCell>
-                    <TableCell className="text-right font-bold text-slate-700 text-xs">₱{l.amount.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {l.status === 'pending' && (
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400" onClick={() => handleEditLoan(l)}>
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400" onClick={() => handleDeleteLoan(l.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            {loansLoading ? (
+              <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50">
+                    <TableHead className="font-bold">Loaner / Purpose</TableHead>
+                    <TableHead className="font-bold">Status</TableHead>
+                    <TableHead className="font-bold">Date</TableHead>
+                    <TableHead className="text-right font-bold">Principal</TableHead>
+                    <TableHead className="text-right font-bold">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loans && loans.length > 0 ? loans.map((l) => (
+                    <TableRow key={l.id} className="group transition-colors border-b">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800 text-xs">{l.loanerName || 'Self'}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
+                          {l.adminNote && (
+                            <div className="mt-1 flex items-start gap-1 bg-primary/5 p-1 rounded border border-primary/10">
+                              <MessageSquareText className="h-2 w-2 text-primary mt-0.5 shrink-0" />
+                              <span className="text-[9px] text-primary italic font-medium leading-tight">Note: {l.adminNote}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn(
+                          "capitalize text-[9px] font-bold",
+                          l.status === 'approved' ? "bg-green-50 text-green-700" : 
+                          l.status === 'pending' ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"
+                        )}>
+                          {l.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground">{formatDate(l.requestDate)}</TableCell>
+                      <TableCell className="text-right font-bold text-slate-700 text-xs">₱{l.amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {l.status === 'pending' && (
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary" onClick={() => handleEditLoan(l)}>
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-destructive" onClick={() => handleDeleteLoan(l.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic text-xs">No loan records found.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 

@@ -29,9 +29,15 @@ import {
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_MEMBERS } from '@/lib/mock-data';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function LoanRequestPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [amount, setAmount] = useState(5000);
   const [term, setTerm] = useState(1);
   const [purpose, setPurpose] = useState('');
@@ -45,14 +51,7 @@ export default function LoanRequestPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedMemberId) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a member account.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!user || !firestore) return;
 
     if (!loanerName.trim()) {
       toast({
@@ -74,34 +73,37 @@ export default function LoanRequestPage() {
 
     setIsSubmitting(true);
 
-    // Simulate submission process and save to localStorage for prototype persistence
-    setTimeout(() => {
-      const selectedMember = MOCK_MEMBERS.find(m => m.id === selectedMemberId);
-      
-      const newLoan = {
-        id: `l-user-${Date.now()}`,
-        memberId: selectedMemberId,
-        loanerName: loanerName,
-        amount: amount,
-        status: 'pending',
-        requestDate: new Date().toISOString().split('T')[0],
-        interestRate: interestRate,
-        termMonths: term,
-        purpose: purpose,
-      };
+    const loanData = {
+      memberId: user.uid,
+      loanerName: loanerName,
+      amount: amount,
+      status: 'pending',
+      requestDate: new Date().toISOString().split('T')[0],
+      interestRate: interestRate,
+      termMonths: term,
+      purpose: purpose,
+    };
 
-      // Get existing local loans
-      const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-      localStorage.setItem('daryloan_user_loans', JSON.stringify([newLoan, ...localLoans]));
+    const loansCollection = collection(firestore, 'loans');
 
-      setIsSubmitting(false);
-      toast({
-        title: "Application Submitted",
-        description: `Request for ₱${amount.toLocaleString()} on behalf of ${selectedMember?.name} has been sent for admin review.`,
+    addDoc(loansCollection, loanData)
+      .then(() => {
+        setIsSubmitting(false);
+        toast({
+          title: "Application Submitted",
+          description: `Request for ₱${amount.toLocaleString()} has been sent for admin review.`,
+        });
+        router.push('/dashboard/member');
+      })
+      .catch(async (e) => {
+        const error = new FirestorePermissionError({
+          path: loansCollection.path,
+          operation: 'create',
+          requestResourceData: loanData
+        });
+        errorEmitter.emit('permission-error', error);
+        setIsSubmitting(false);
       });
-      
-      router.push('/dashboard/member');
-    }, 1500);
   };
 
   const formatTerm = (val: number) => {
@@ -120,7 +122,7 @@ export default function LoanRequestPage() {
 
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-headline font-bold text-slate-800">New Loan Application</h1>
-        <p className="text-muted-foreground">Adjust your loan parameters to see calculations powered by our Excel Formula Engine.</p>
+        <p className="text-muted-foreground">Adjust your loan parameters to see live community interest calculations.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -128,31 +130,9 @@ export default function LoanRequestPage() {
           <form onSubmit={handleSubmit}>
             <CardHeader>
               <CardTitle>Loan Details</CardTitle>
-              <CardDescription>Specify the member and loaner details for this request.</CardDescription>
+              <CardDescription>Specify the details for this request.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              <div className="space-y-2">
-                <Label htmlFor="memberSelect">Full Name of the Member</Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
-                  <Select 
-                    defaultValue="m1" 
-                    onValueChange={(val) => setSelectedMemberId(val)}
-                  >
-                    <SelectTrigger id="memberSelect" className="pl-10">
-                      <SelectValue placeholder="Select a member account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOCK_MEMBERS.filter(m => m.role === 'member').map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="loanerName">Full Name of Loaner</Label>
                 <div className="relative">
@@ -167,7 +147,7 @@ export default function LoanRequestPage() {
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground italic">
-                  * If the member is requesting for themselves, enter the member's name again here.
+                  * If the member is requesting for themselves, enter your own name.
                 </p>
               </div>
 

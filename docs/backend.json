@@ -18,6 +18,49 @@
         }
       },
       "required": ["email", "role"]
+    },
+    "Loan": {
+      "title": "Loan",
+      "description": "A loan request and its current status.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "description": "The UID of the member who owns this account."
+        },
+        "loanerName": {
+          "type": "string",
+          "description": "The display name of the person receiving the loan."
+        },
+        "amount": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected", "repaid", "overdue"]
+        },
+        "requestDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "interestRate": {
+          "type": "number"
+        },
+        "termMonths": {
+          "type": "number"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "adminNote": {
+          "type": "string"
+        }
+      },
+      "required": ["memberId", "amount", "status", "requestDate"]
     }
   },
   "auth": {
@@ -31,6 +74,12 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "User-specific settings and role assignment."
+    },
+    "/loans/{loanId}": {
+      "schema": {
+        "$ref": "#/entities/Loan"
+      },
+      "description": "Central collection of community loan records."
     }
   }
 }
