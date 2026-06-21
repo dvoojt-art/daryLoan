@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -42,7 +41,8 @@ export default function LoanRequestPage() {
   const [loanerName, setLoanerName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const interestRate = 0.10;
+  // Base monthly rate is 10%
+  const monthlyInterestRate = 0.10;
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -70,13 +70,18 @@ export default function LoanRequestPage() {
 
     setIsSubmitting(true);
 
+    // Calculate specific interest rate to store in database
+    // For 7 days (0.25 term), interest is 5% total
+    // For months, interestRate stores the monthly percentage (10%)
+    const storedInterestRate = term === 0.25 ? 0.05 : monthlyInterestRate;
+
     const loanData = {
       memberId: user.uid,
       loanerName: loanerName,
       amount: amount,
       status: 'pending',
       requestDate: new Date().toISOString().split('T')[0],
-      interestRate: interestRate,
+      interestRate: storedInterestRate,
       termMonths: term,
       purpose: purpose,
     };
@@ -174,7 +179,7 @@ export default function LoanRequestPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground italic">
-                  * Interest is calculated at 10% per month of the principal.
+                  * 7 days term is 5% interest, others are 10% per month of the principal.
                 </p>
               </div>
 
@@ -217,7 +222,7 @@ export default function LoanRequestPage() {
           <ExcelFormulaInput 
             label="Estimated Total Interest"
             amount={amount}
-            rate={interestRate}
+            rate={monthlyInterestRate}
             term={term}
           />
 
@@ -247,7 +252,7 @@ export default function LoanRequestPage() {
           <div className="p-4 bg-accent/5 rounded-xl border border-accent/10 flex gap-3">
             <Info className="h-5 w-5 text-accent shrink-0" />
             <p className="text-[10px] text-muted-foreground leading-relaxed">
-              Calculations are based on <b>10% Monthly Interest</b> configured by Admin. Final interest rates may be adjusted during manual review.
+              Calculations are based on <b>5% for 7 days</b> and <b>10% per month</b> for longer terms. Final interest rates may be adjusted during manual review.
             </p>
           </div>
         </div>

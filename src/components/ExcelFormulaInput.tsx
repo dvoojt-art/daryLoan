@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,7 +9,7 @@ import { cn } from '@/lib/utils';
 interface ExcelFormulaInputProps {
   label: string;
   amount: number;
-  rate: number;
+  rate: number; // This represents the base monthly rate (e.g., 0.10)
   term: number;
   className?: string;
   onChange?: (value: number) => void;
@@ -21,14 +20,17 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
   const [totalInterest, setTotalInterest] = useState<number>(0);
 
   useEffect(() => {
-    // Logic: Simple interest of 10% per month
-    // 1 month = 10%, 2 months = 20%, 3 months = 30%
-    const monthlyRate = rate; // 0.10 (10%)
+    // Logic: 
+    // 7 days (0.25 term) = 5% flat interest
+    // 1 month or more = 10% interest per month (rate * term)
     
-    // Total Interest = Principal * (Rate * Term)
-    const interest = amount * (monthlyRate * term);
+    let interest = 0;
+    if (term === 0.25) {
+      interest = amount * 0.05; // 5% for the 7-day period
+    } else {
+      interest = amount * (rate * term); // 10% per month for longer terms
+    }
     
-    // Total Payable = Principal + Total Interest
     const total = amount + interest;
 
     setTotalPayable(parseFloat(total.toFixed(2)));
@@ -50,15 +52,19 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
       </div>
 
       <div className="space-y-3">
-        {/* Simple Interest Formula Display */}
+        {/* Interest Formula Display */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Community Interest Rule</span>
-            <span className="text-[10px] font-code bg-primary/10 text-primary px-1.5 py-0.5 rounded">FX-ENGINE v1.1</span>
+            <span className="text-[10px] font-code bg-primary/10 text-primary px-1.5 py-0.5 rounded">FX-ENGINE v1.2</span>
           </div>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             <span className="text-blue-600 font-bold">=AMOUNT</span>
-            <span> * (1 + ({(rate * 100).toFixed(0)}% * {formatTermDisplay(term)}))</span>
+            {term === 0.25 ? (
+              <span> * 5% (7-Day Term)</span>
+            ) : (
+              <span> * ({(rate * 100).toFixed(0)}% * {formatTermDisplay(term)})</span>
+            )}
           </div>
           <Input 
             readOnly 
@@ -75,7 +81,11 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
           <span className="text-[10px] font-bold text-slate-400 uppercase">Total Interest Logic</span>
           <div className="bg-white border rounded-md p-2 font-code text-xs text-slate-600 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
             <span className="text-green-600 font-bold">=INTEREST</span>
-            <span>(₱{amount.toLocaleString()} * {(rate * 100).toFixed(0)}% * {term} mo)</span>
+            {term === 0.25 ? (
+              <span>(₱{amount.toLocaleString()} * 5%)</span>
+            ) : (
+              <span>(₱{amount.toLocaleString()} * {(rate * 100).toFixed(0)}% * {term} mo)</span>
+            )}
           </div>
           <div className="flex justify-between items-center text-sm px-1">
             <span className="text-muted-foreground italic text-xs">Total Interest:</span>
@@ -86,7 +96,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
 
       <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-medium">
         <Calculator className="h-3 w-3" />
-        <span>CALCULATING: 10% PER MONTH RULE</span>
+        <span>CALCULATING: {term === 0.25 ? '5% FLAT FOR 7 DAYS' : '10% PER MONTH RULE'}</span>
       </div>
     </div>
   );
