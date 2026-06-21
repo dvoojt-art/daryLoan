@@ -66,7 +66,7 @@ export default function TermsPage() {
 
         <div className="pt-8 border-t text-center">
           <p className="text-sm text-muted-foreground">
-            Need more clarification? Contact us at support@daryloan.com
+            Need more clarification? Contact us at bayonladaryljohn@gmail.com
           </p>
         </div>
       </main>
