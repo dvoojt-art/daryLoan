@@ -128,7 +128,7 @@ export default function LandingPage() {
                       <label className="text-[10px] font-bold text-slate-400 uppercase">Formula Input (Cell B14)</label>
                       <div className="bg-white/10 p-4 rounded-xl font-code text-sm text-accent border border-white/10 flex items-center gap-3">
                         <span className="text-accent font-bold">fx</span>
-                        <span className="text-white">= TOTAL ( LOAN_AMOUNT +INTEREST_RATE )</span>
+                        <span className="text-white">= TOTAL ( LOAN_AMOUNT + INTEREST_RATE )</span>
                       </div>
                     </div>
                     
