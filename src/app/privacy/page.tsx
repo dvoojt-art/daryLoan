@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from 'link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Shield } from 'lucide-react';
 
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
 
         <div className="pt-8 border-t text-center">
           <p className="text-sm text-muted-foreground">
-            Questions about our privacy practices? Reach out at privacy@daryloan.com
+            Questions about our privacy practices? Reach out at bayonladaryljohn@gmail.com
           </p>
         </div>
       </main>
