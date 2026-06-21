@@ -24,15 +24,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MOCK_LOANS, MOCK_MEMBERS } from '@/lib/mock-data';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -40,6 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mounted, setMounted] = useState(false);
   const { user, loading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
   const isAdmin = pathname.includes('/admin');
@@ -47,6 +48,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Real-time Data Fetching for Notifications
+  const loansQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    if (isAdmin) return collection(firestore, 'loans');
+    return query(collection(firestore, 'loans'), where('memberId', '==', user.uid));
+  }, [firestore, user, isAdmin]);
+
+  const usersQuery = useMemo(() => {
+    if (!firestore || !isAdmin) return null;
+    return collection(firestore, 'users');
+  }, [firestore, isAdmin]);
+
+  const { data: loansData } = useCollection<any>(loansQuery);
+  const { data: usersData } = useCollection<any>(usersQuery);
+
+  const loans = loansData || [];
+  const users = usersData || [];
 
   // Simple auth protection
   useEffect(() => {
@@ -62,59 +81,62 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-  const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
-  const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
-  const pendingMembers = MOCK_MEMBERS.filter(m => m.status === 'pending');
+  const adminNotifications = useMemo(() => {
+    const pendingLoans = loans.filter(l => l.status === 'pending');
+    const overdueLoans = loans.filter(l => l.status === 'overdue');
+    const pendingMembers = users.filter(m => m.status === 'pending');
 
-  const myMemberId = 'm1';
-  const myOverdue = MOCK_LOANS.filter(l => l.memberId === myMemberId && l.status === 'overdue');
-  const myApproved = MOCK_LOANS.filter(l => l.memberId === myMemberId && l.status === 'approved');
+    return [
+      ...pendingLoans.map(l => ({ 
+        id: `pl-${l.id}`, 
+        title: 'Approval Required', 
+        description: `Request for ₱${l.amount.toLocaleString()} from ${l.loanerName || users.find(u => u.id === l.memberId)?.email || 'Member'}`, 
+        icon: HandCoins, 
+        href: '/dashboard/admin/loans',
+        category: 'approval'
+      })),
+      ...overdueLoans.map(l => ({ 
+        id: `ol-${l.id}`, 
+        title: 'Payment Overdue', 
+        description: `₱${l.amount.toLocaleString()} loan from ${l.loanerName || 'Member'} is past due`, 
+        icon: AlertCircle, 
+        href: '/dashboard/admin/ledger',
+        category: 'due'
+      })),
+      ...pendingMembers.map(m => ({ 
+        id: `pm-${m.id}`, 
+        title: 'New Member Application', 
+        description: `${m.email} is awaiting verification`, 
+        icon: UserCheck, 
+        href: '/dashboard/admin/members',
+        category: 'approval'
+      })),
+    ];
+  }, [loans, users]);
 
-  const adminNotifications = useMemo(() => [
-    ...pendingLoans.map(l => ({ 
-      id: `pl-${l.id}`, 
-      title: 'Approval Required', 
-      description: `Request for ₱${l.amount.toLocaleString()} from ${MOCK_MEMBERS.find(m => m.id === l.memberId)?.name}`, 
-      icon: HandCoins, 
-      href: '/dashboard/admin/loans',
-      category: 'approval'
-    })),
-    ...overdueLoans.map(l => ({ 
-      id: `ol-${l.id}`, 
-      title: 'Payment Overdue', 
-      description: `₱${l.amount.toLocaleString()} loan from ${MOCK_MEMBERS.find(m => m.id === l.memberId)?.name} is past due`, 
-      icon: AlertCircle, 
-      href: '/dashboard/admin/ledger',
-      category: 'due'
-    })),
-    ...pendingMembers.map(m => ({ 
-      id: `pm-${m.id}`, 
-      title: 'New Member Application', 
-      description: `${m.name} is awaiting background verification`, 
-      icon: UserCheck, 
-      href: '/dashboard/admin/members',
-      category: 'approval'
-    })),
-  ], [pendingLoans, overdueLoans, pendingMembers]);
+  const memberNotifications = useMemo(() => {
+    const myOverdue = loans.filter(l => l.status === 'overdue');
+    const myApproved = loans.filter(l => l.status === 'approved');
 
-  const memberNotifications = useMemo(() => [
-    ...myOverdue.map(l => ({ 
-      id: `mol-${l.id}`, 
-      title: 'Urgent: Overdue Payment', 
-      description: `Your loan for "${l.purpose}" is past its due date.`, 
-      icon: AlertCircle, 
-      href: '/dashboard/member',
-      category: 'due'
-    })),
-    ...myApproved.map(l => ({ 
-      id: `map-${l.id}`, 
-      title: 'Loan Agreement Ready', 
-      description: `Your ₱${l.amount.toLocaleString()} loan has been approved. Check your portal for details.`, 
-      icon: Clock, 
-      href: '/dashboard/member',
-      category: 'approval'
-    })),
-  ], [myOverdue, myApproved]);
+    return [
+      ...myOverdue.map(l => ({ 
+        id: `mol-${l.id}`, 
+        title: 'Urgent: Overdue Payment', 
+        description: `Your loan for "${l.purpose}" is past its due date.`, 
+        icon: AlertCircle, 
+        href: '/dashboard/member',
+        category: 'due'
+      })),
+      ...myApproved.map(l => ({ 
+        id: `map-${l.id}`, 
+        title: 'Loan Agreement Ready', 
+        description: `Your ₱${l.amount.toLocaleString()} loan has been approved. Check your portal.`, 
+        icon: Clock, 
+        href: '/dashboard/member',
+        category: 'approval'
+      })),
+    ];
+  }, [loans]);
 
   const allNotifications = isAdmin ? adminNotifications : memberNotifications;
   const activeNotifications = allNotifications.filter(n => !dismissedIds.has(n.id));
