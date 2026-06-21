@@ -136,7 +136,7 @@ export default function LandingPage() {
                       <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Status Check</p>
                         <div className="font-code text-xs text-slate-400 mb-2">= SUM ( B14 : B20 )</div>
-                        <p className="text-xl font-headline font-bold text-green-400">Valid</p>
+                        <p className="text-xl font-headline font-bold text-green-400">480,000</p>
                       </div>
                       <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Resulting Amortization</p>
