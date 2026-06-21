@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -38,8 +39,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
 
   const formatTermDisplay = (t: number) => {
     if (t === 0.25) return "7 days";
-    if (t === 0.5) return "15 days";
-    return `${t} mo`;
+    return `${t} month${t > 1 ? 's' : ''}`;
   };
 
   return (
@@ -66,7 +66,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
             className="font-headline font-bold text-xl text-primary bg-white h-12 border-slate-200"
           />
           <p className="text-[10px] text-muted-foreground px-1 italic">
-            * Result includes principal + {(term * 10).toFixed(0)}% cumulative interest
+            * Result includes principal + interest
           </p>
         </div>
 
@@ -78,7 +78,7 @@ export function ExcelFormulaInput({ label, amount, rate, term, className, onChan
             <span>(₱{amount.toLocaleString()} * {(rate * 100).toFixed(0)}% * {term} mo)</span>
           </div>
           <div className="flex justify-between items-center text-sm px-1">
-            <span className="text-muted-foreground italic text-xs">Total Interest ({ (term * 10).toFixed(0) }%):</span>
+            <span className="text-muted-foreground italic text-xs">Total Interest:</span>
             <span className="font-bold text-slate-700">₱{totalInterest.toLocaleString()}</span>
           </div>
         </div>

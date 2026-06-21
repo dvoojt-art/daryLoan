@@ -23,12 +23,10 @@ import {
   Info, 
   FunctionSquare, 
   Loader2, 
-  User,
-  Users
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { MOCK_MEMBERS } from '@/lib/mock-data';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -42,7 +40,6 @@ export default function LoanRequestPage() {
   const [term, setTerm] = useState(1);
   const [purpose, setPurpose] = useState('');
   const [loanerName, setLoanerName] = useState('');
-  const [selectedMemberId, setSelectedMemberId] = useState('m1');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const interestRate = 0.10;
@@ -106,12 +103,6 @@ export default function LoanRequestPage() {
       });
   };
 
-  const formatTerm = (val: number) => {
-    if (val === 0.25) return "7 Days";
-    if (val === 0.5) return "15 Days";
-    return `${val} Months`;
-  };
-
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-2">
@@ -169,22 +160,22 @@ export default function LoanRequestPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Repayment Term</Label>
-                  <span className="text-lg font-headline font-bold text-primary">{formatTerm(term)}</span>
-                </div>
-                <Slider 
-                  value={[term]} 
-                  onValueChange={(v) => setTerm(v[0])} 
-                  min={0.25} 
-                  max={3} 
-                  step={0.25} 
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Min: 7 Days</span>
-                  <span>Max: 3 Months</span>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="term">Repayment Term</Label>
+                <Select value={term.toString()} onValueChange={(v) => setTerm(parseFloat(v))}>
+                  <SelectTrigger id="term" className="h-11">
+                    <SelectValue placeholder="Select repayment term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0.25">7 Days</SelectItem>
+                    <SelectItem value="1">1 Month</SelectItem>
+                    <SelectItem value="2">2 Months</SelectItem>
+                    <SelectItem value="3">3 Months</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground italic">
+                  * Interest is calculated at 10% per month of the principal.
+                </p>
               </div>
 
               <div className="space-y-2">
