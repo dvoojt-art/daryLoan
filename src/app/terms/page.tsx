@@ -23,7 +23,7 @@ export default function TermsPage() {
         </div>
 
         <section className="space-y-4">
-          <p className="text-muted-foreground italic">Effective Date: March 2024</p>
+          <p className="text-muted-foreground italic">Effective Date: June 2026</p>
           <p className="leading-relaxed">
             Welcome to DaryLoan. By accessing or using our platform, you agree to comply with and be bound by the following terms and conditions.
           </p>

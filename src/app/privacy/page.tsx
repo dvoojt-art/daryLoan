@@ -23,7 +23,7 @@ export default function PrivacyPage() {
         </div>
 
         <section className="space-y-4">
-          <p className="text-muted-foreground italic">Last Updated: March 2024</p>
+          <p className="text-muted-foreground italic">Last Updated: June 2026</p>
           <p className="leading-relaxed">
             At DaryLoan, we are committed to protecting your personal and financial information. This Privacy Policy outlines how we collect, use, and safeguard your data when you use our platform.
           </p>
