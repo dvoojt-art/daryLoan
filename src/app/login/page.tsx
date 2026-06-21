@@ -9,18 +9,51 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Wallet, ShieldCheck, User, Lock, Mail, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent, role: 'admin' | 'member') => {
+  const handleLogin = async (e: React.FormEvent, role: 'admin' | 'member') => {
     e.preventDefault();
+    if (!auth) return;
+
     setIsLoading(true);
-    // Simulate login by redirecting after a short delay
-    setTimeout(() => {
-      router.push(`/dashboard/${role}`);
-    }, 800);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // Basic role-based redirection based on email provided in prompt
+      // Admin email: admin@daryloan.com
+      // Member email: sinking@daryloan.com
+      if (email === 'admin@daryloan.com' && role === 'admin') {
+        router.push('/dashboard/admin');
+      } else if (email === 'sinking@daryloan.com' && role === 'member') {
+        router.push('/dashboard/member');
+      } else {
+        // Fallback for demo purposes if roles don't match specific accounts
+        router.push(`/dashboard/${role}`);
+      }
+      
+      toast({
+        title: "Welcome back!",
+        description: "Successfully signed into your portal.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: error.message || "Invalid email or password.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,7 +101,7 @@ export default function LoginPage() {
               <form onSubmit={(e) => handleLogin(e, 'member')}>
                 <CardHeader>
                   <CardTitle className="text-xl">Member Login</CardTitle>
-                  <CardDescription>Enter your credentials to access your portal.</CardDescription>
+                  <CardDescription>Enter credentials to access your portal.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -78,8 +111,10 @@ export default function LoginPage() {
                       <Input 
                         id="member-email" 
                         type="email" 
-                        placeholder="member@example.com" 
+                        placeholder="member@daryloan.com" 
                         className="pl-10" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         required 
                       />
                     </div>
@@ -87,7 +122,6 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="member-password">Password</Label>
-                      <Link href="#" className="text-xs text-primary hover:underline">Forgot?</Link>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -96,6 +130,8 @@ export default function LoginPage() {
                         type="password" 
                         placeholder="••••••••" 
                         className="pl-10" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required 
                       />
                     </div>
@@ -125,6 +161,8 @@ export default function LoginPage() {
                         type="email" 
                         placeholder="admin@daryloan.com" 
                         className="pl-10" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         required 
                       />
                     </div>
@@ -132,7 +170,6 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="admin-password">Password</Label>
-                      <Link href="#" className="text-xs text-primary hover:underline">Forgot?</Link>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -141,6 +178,8 @@ export default function LoginPage() {
                         type="password" 
                         placeholder="••••••••" 
                         className="pl-10" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required 
                       />
                     </div>

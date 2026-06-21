@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Wallet, 
   LayoutDashboard, 
@@ -17,7 +18,8 @@ import {
   Search,
   AlertCircle,
   Clock,
-  UserCheck
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,17 +31,36 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
+  const { user, loading } = useUser();
+  const auth = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const isAdmin = pathname.includes('/admin');
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Simple auth protection
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, mounted, router]);
+
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push('/login');
+    }
+  };
 
   const pendingLoans = MOCK_LOANS.filter(l => l.status === 'pending');
   const overdueLoans = MOCK_LOANS.filter(l => l.status === 'overdue');
@@ -122,6 +143,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Request Loan', icon: HandCoins, href: '/dashboard/member/request' },
       ];
 
+  if (!mounted || loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-[#010642]">
+        <Loader2 className="h-8 w-8 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {sidebarOpen && (
@@ -173,19 +204,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="p-4 border-t border-white/10 space-y-4 bg-[#010642]">
             <div className="flex items-center gap-3 px-3">
               <Avatar className="h-9 w-9 border border-white/10">
-                <AvatarImage src={`https://picsum.photos/seed/${isAdmin ? 'admin' : 'member'}/100/100`} />
-                <AvatarFallback>{isAdmin ? 'AD' : 'ME'}</AvatarFallback>
+                <AvatarImage src={`https://picsum.photos/seed/${user.uid}/100/100`} />
+                <AvatarFallback>{user.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="overflow-hidden">
-                <p className="text-sm font-semibold truncate text-white">{isAdmin ? 'Admin Portal' : 'Member Portal'}</p>
-                <p className="text-xs text-slate-400 truncate">{isAdmin ? 'Full Access' : 'View and Request Only'}</p>
+                <p className="text-sm font-semibold truncate text-white">{user.email}</p>
+                <p className="text-xs text-slate-400 truncate">{isAdmin ? 'Admin Portal' : 'Member Portal'}</p>
               </div>
             </div>
-            <Button asChild variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/5">
-              <Link href="/login">
-                <LogOut className="mr-3 h-5 w-5" />
-                Logout
-              </Link>
+            <Button variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/5" onClick={handleLogout}>
+              <LogOut className="mr-3 h-5 w-5" />
+              Logout
             </Button>
           </div>
         </div>
