@@ -141,7 +141,7 @@ export default function LandingPage() {
                       <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Resulting Amortization</p>
                         <div className="font-code text-xs text-slate-400 mb-2">Display Value</div>
-                        <p className="text-xl font-headline font-bold text-accent">₱1,245.50</p>
+                        <p className="text-xl font-headline font-bold text-accent">₱48,000</p>
                       </div>
                     </div>
                     
