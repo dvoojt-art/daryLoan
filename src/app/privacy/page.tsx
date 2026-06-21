@@ -7,8 +7,8 @@ import { ArrowLeft, Shield } from 'lucide-react';
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-white">
-        <Link href="/" className="flex items-center gap-2">
+      <header className="px-4 lg:px-6 h-16 flex items-center border-b border-white/10 bg-[#010642]">
+        <Link href="/" className="flex items-center gap-2 text-white hover:text-accent transition-colors">
           <ArrowLeft className="h-4 w-4" />
           <span className="text-sm font-medium">Back to Home</span>
         </Link>
