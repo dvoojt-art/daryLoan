@@ -44,7 +44,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { MOCK_CONTRIBUTIONS } from '@/lib/mock-data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -76,6 +75,18 @@ export default function MemberDashboard() {
   }, [firestore, user]);
 
   const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
+
+  // Real-time Contributions Query
+  const contributionsQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'contributions'),
+      where('memberId', '==', user.uid),
+      orderBy('date', 'asc')
+    );
+  }, [firestore, user]);
+
+  const { data: liveContributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
 
   useEffect(() => {
     setMounted(true);
@@ -154,18 +165,17 @@ export default function MemberDashboard() {
 
   if (!mounted) return null;
 
-  // For the prototype, we still use mock contributions as they represent historical growth
-  const myContributions = MOCK_CONTRIBUTIONS.filter(c => c.memberId === 'm1');
-  const totalContributed = myContributions.reduce((acc, c) => acc + c.amount, 0);
+  const contributions = liveContributions || [];
+  const totalContributed = contributions.reduce((acc, c) => acc + c.amount, 0);
   
   const activeLoan = loans?.find(l => l.status === 'approved');
   const overdueLoan = loans?.find(l => l.status === 'overdue');
   const recentlyDecisioned = loans?.find(l => (l.status === 'approved' || l.status === 'rejected') && l.adminNote);
 
-  const chartData = myContributions.map(c => ({
+  const chartData = contributions.map(c => ({
     date: c.date,
     amount: c.amount,
-  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }));
 
   return (
     <div className="p-6 space-y-6">
@@ -221,19 +231,29 @@ export default function MemberDashboard() {
             <TrendingUp className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="h-[200px] w-full mt-4">
-              <ChartContainer config={{ amount: { label: "Contribution", color: "hsl(var(--primary))" } }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₱${v}`} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="amount" stroke="var(--color-amount)" strokeWidth={3} dot={{ r: 4, fill: "var(--color-amount)" }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
+            {contributionsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              </div>
+            ) : contributions.length > 0 ? (
+              <div className="h-[200px] w-full mt-4">
+                <ChartContainer config={{ amount: { label: "Contribution", color: "hsl(var(--primary))" } }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `₱${v}`} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="amount" stroke="var(--color-amount)" strokeWidth={3} dot={{ r: 4, fill: "var(--color-amount)" }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground italic text-sm">
+                No contribution data available yet.
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -358,24 +378,30 @@ export default function MemberDashboard() {
             <History className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold">Date</TableHead>
-                  <TableHead className="font-bold">Ref ID</TableHead>
-                  <TableHead className="text-right font-bold">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {myContributions.slice(0, 5).map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-xs">{formatDate(c.date)}</TableCell>
-                    <TableCell className="font-mono text-[10px] text-muted-foreground uppercase">DARY-{c.id}</TableCell>
-                    <TableCell className="text-right font-bold text-primary text-xs">₱{c.amount.toLocaleString()}</TableCell>
+            {contributionsLoading ? (
+              <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50">
+                    <TableHead className="font-bold">Date</TableHead>
+                    <TableHead className="text-right font-bold">Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {contributions.length > 0 ? [...contributions].reverse().slice(0, 5).map((c, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="text-xs">{formatDate(c.date)}</TableCell>
+                      <TableCell className="text-right font-bold text-primary text-xs">₱{c.amount.toLocaleString()}</TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-8 text-muted-foreground italic text-xs">No contribution records found.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -61,6 +61,27 @@
         }
       },
       "required": ["memberId", "amount", "status", "requestDate"]
+    },
+    "Contribution": {
+      "title": "Contribution",
+      "description": "A record of a member's financial contribution to the pool.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "description": "The UID of the contributing member."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount contributed."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of contribution."
+        }
+      },
+      "required": ["memberId", "amount", "date"]
     }
   },
   "auth": {
@@ -80,6 +101,12 @@
         "$ref": "#/entities/Loan"
       },
       "description": "Central collection of community loan records."
+    },
+    "/contributions/{contributionId}": {
+      "schema": {
+        "$ref": "#/entities/Contribution"
+      },
+      "description": "Collection of member savings and contributions."
     }
   }
 }
