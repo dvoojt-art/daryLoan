@@ -59,23 +59,26 @@ export default function LoanRequestPage() {
 
   // Dynamic Probability Logic
   const { consistencyScore, probabilityResult, isOverLimit } = useMemo(() => {
-    if (!contributions || contributions.length === 0) {
-      return { consistencyScore: 0, probabilityResult: "Review", isOverLimit: amount > 30000 };
-    }
-    
-    // Simple consistency logic for prototype: 
-    // 5+ contributions = 95% consistency
-    // 3-4 contributions = 85% consistency
-    // 1-2 contributions = 60% consistency
-    const count = contributions.length;
+    // Consistency calculation for the progress bar
+    const count = contributions?.length || 0;
     let score = 0;
     if (count >= 5) score = 0.95;
     else if (count >= 3) score = 0.85;
-    else score = 0.60;
+    else if (count > 0) score = 0.60;
+    else score = 0;
 
-    // Rule: Exceeding 30,000 always triggers manual review
     const overLimit = amount > 30000;
-    const result = (score > 0.8 && !overLimit) ? `${(score * 100).toFixed(0)}%` : "Review";
+    
+    // Result logic based on 30k limit percentage
+    // If amount is 0, show 0%. 30,000 = 100%. 15,000 = 50%.
+    // If > 30,000, show "Review"
+    let result;
+    if (overLimit) {
+      result = "Review";
+    } else {
+      const percentage = Math.round((amount / 30000) * 100);
+      result = `${percentage}%`;
+    }
     
     return { consistencyScore: score, probabilityResult: result, isOverLimit: overLimit };
   }, [contributions, amount]);
@@ -199,12 +202,12 @@ export default function LoanRequestPage() {
                 <Slider 
                   value={[amount]} 
                   onValueChange={(v) => setAmount(v[0])} 
-                  min={500} 
+                  min={0} 
                   max={50000} 
                   step={500} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Min: ₱500</span>
+                  <span>Min: ₱0</span>
                   <span>Max: ₱50,000</span>
                 </div>
               </div>
@@ -280,10 +283,10 @@ export default function LoanRequestPage() {
             <CardContent>
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Member contribution consistency and loan limits are evaluated for instant probability.
+                  Instant eligibility based on shield limit (₱30k) and member history.
                 </p>
                 <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap">
-                  =IF(AND(CONSISTENCY &gt; 0.8, AMOUNT &lt;= 30000), "{probabilityResult}", "Review")
+                  =IF(AMOUNT &gt; 30000, "Review", ROUND(AMOUNT/30000*100) &amp; "%")
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700">Result:</span>
@@ -301,7 +304,7 @@ export default function LoanRequestPage() {
                 {consistencyScore > 0 && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground">
-                      <span>Consistency</span>
+                      <span>History Consistency</span>
                       <span>{(consistencyScore * 100).toFixed(0)}%</span>
                     </div>
                     <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
