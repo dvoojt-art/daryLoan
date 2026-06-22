@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -18,7 +19,8 @@ import {
   Calendar,
   User,
   MessageSquareQuote,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +61,20 @@ export default function AdminLoanApprovals() {
 
   const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
   const { data: members } = useCollection<any>(membersQuery);
+
+  const selectedLoan = useMemo(() => loans?.find(l => l.id === selectedLoanId), [loans, selectedLoanId]);
+
+  // Real-time Contributions for the selected member (for GenAI analysis)
+  const contributionsQuery = useMemo(() => {
+    if (!firestore || !selectedLoan?.memberId) return null;
+    return query(
+      collection(firestore, 'contributions'),
+      where('memberId', '==', selectedLoan.memberId),
+      orderBy('date', 'desc')
+    );
+  }, [firestore, selectedLoan?.memberId]);
+
+  const { data: selectedMemberContributions } = useCollection<any>(contributionsQuery);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -118,7 +134,6 @@ export default function AdminLoanApprovals() {
            l.purpose.toLowerCase().includes(search.toLowerCase()));
   });
 
-  const selectedLoan = loans?.find(l => l.id === selectedLoanId);
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
   const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown';
 
@@ -279,10 +294,11 @@ export default function AdminLoanApprovals() {
                 </CardContent>
               </Card>
 
+              {/* GenAI Risk Assessment uses live member contribution history */}
               <LoanRiskAssessment 
                 memberId={selectedLoan.memberId}
                 requestedAmount={selectedLoan.amount}
-                contributionHistory={[]} // This should ideally be fetched from Firestore
+                contributionHistory={selectedMemberContributions || []}
               />
 
               <div className="flex gap-3">
