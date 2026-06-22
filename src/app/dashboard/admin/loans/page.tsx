@@ -43,13 +43,12 @@ export default function AdminLoanApprovals() {
     setMounted(true);
   }, []);
 
-  // Real-time pending loans
+  // Simplified query to avoid composite index requirement during prototype phase
   const loansQuery = useMemo(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, 'loans'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'desc')
+      where('status', '==', 'pending')
     );
   }, [firestore]);
 
@@ -127,12 +126,32 @@ export default function AdminLoanApprovals() {
       });
   };
 
-  const filteredLoans = (loans || []).filter(l => {
-    const member = getMember(l.memberId);
-    return (member?.name?.toLowerCase().includes(search.toLowerCase()) || 
-           (l.loanerName && l.loanerName.toLowerCase().includes(search.toLowerCase())) ||
-           l.purpose.toLowerCase().includes(search.toLowerCase()));
-  });
+  // Robust filtering and sorting in memory to ensure real-time synchronization
+  const filteredLoans = useMemo(() => {
+    if (!loans) return [];
+    
+    const searchLower = search.toLowerCase().trim();
+    
+    return loans
+      .filter(l => {
+        if (!searchLower) return true;
+        
+        const member = getMember(l.memberId);
+        const memberName = (member?.name || '').toLowerCase();
+        const loanerName = (l.loanerName || '').toLowerCase();
+        const purpose = (l.purpose || '').toLowerCase();
+        
+        return memberName.includes(searchLower) || 
+               loanerName.includes(searchLower) || 
+               purpose.includes(searchLower);
+      })
+      .sort((a, b) => {
+        // Sort by requestDate descending
+        const dateA = a.requestDate || '';
+        const dateB = b.requestDate || '';
+        return dateB.localeCompare(dateA);
+      });
+  }, [loans, members, search]);
 
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
   const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown';
@@ -213,7 +232,7 @@ export default function AdminLoanApprovals() {
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-800">{loanerName}</span>
                               <span className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
-                                <User className="h-2 w-2" /> Member: {member?.name}
+                                <User className="h-2 w-2" /> Member: {member?.name || 'Loading...'}
                               </span>
                             </div>
                           </div>
