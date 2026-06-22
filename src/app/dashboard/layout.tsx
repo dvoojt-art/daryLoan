@@ -20,7 +20,9 @@ import {
   Clock,
   UserCheck,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -33,7 +35,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser, useAuth, useFirestore, useCollection } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -86,70 +88,83 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const adminNotifications = useMemo(() => {
+    if (!isAdmin) return [];
+    
     const pendingLoans = loans.filter(l => l.status === 'pending');
     const overdueLoans = loans.filter(l => l.status === 'overdue');
     const pendingMembers = users.filter(m => m.status === 'pending');
 
     return [
       ...pendingLoans.map(l => ({ 
-        id: `pl-${l.id}`, 
-        title: 'Approval Required', 
-        description: `Request for ₱${l.amount.toLocaleString()} from ${l.loanerName || users.find(u => u.id === l.memberId)?.name || 'Member'}`, 
+        id: `adm-pl-${l.id}`, 
+        title: 'New Loan Request', 
+        description: `₱${l.amount.toLocaleString()} requested by ${l.loanerName || 'Member'} for ${l.purpose}`, 
         icon: HandCoins, 
         href: '/dashboard/admin/loans',
         category: 'approval'
       })),
       ...overdueLoans.map(l => ({ 
-        id: `ol-${l.id}`, 
-        title: 'Payment Overdue', 
-        description: `₱${l.amount.toLocaleString()} loan from ${l.loanerName || 'Member'} is past due`, 
+        id: `adm-ol-${l.id}`, 
+        title: 'Overdue Loan Alert', 
+        description: `${l.loanerName || 'Member'} is past due on a ₱${l.amount.toLocaleString()} loan`, 
         icon: AlertTriangle, 
         href: '/dashboard/admin/ledger',
         category: 'due'
       })),
       ...pendingMembers.map(m => ({ 
-        id: `pm-${m.id}`, 
-        title: 'New Member Application', 
-        description: `${m.name || m.email} is awaiting verification`, 
+        id: `adm-pm-${m.id}`, 
+        title: 'Pending Registration', 
+        description: `${m.name || m.email} joined and needs account verification`, 
         icon: UserCheck, 
         href: '/dashboard/admin/members',
         category: 'approval'
       })),
     ];
-  }, [loans, users]);
+  }, [loans, users, isAdmin]);
 
   const memberNotifications = useMemo(() => {
+    if (isAdmin) return [];
+    
     const myOverdue = loans.filter(l => l.status === 'overdue');
     const myApproved = loans.filter(l => l.status === 'approved');
     const myRejected = loans.filter(l => l.status === 'rejected');
+    const myLate = loans.filter(l => l.month1 === 'late' || l.month2 === 'late' || l.month3 === 'late');
 
     return [
       ...myOverdue.map(l => ({ 
-        id: `mol-${l.id}`, 
-        title: 'Urgent: Overdue Payment', 
-        description: `Your loan for "${l.purpose}" is past its due date.`, 
-        icon: AlertCircle, 
+        id: `mem-ov-${l.id}`, 
+        title: 'Action Required: Overdue', 
+        description: `Your loan for ${l.purpose} is currently past its due date.`, 
+        icon: AlertTriangle, 
         href: '/dashboard/member',
         category: 'due'
       })),
       ...myApproved.map(l => ({ 
-        id: `map-${l.id}`, 
-        title: 'Loan Approved!', 
-        description: `Your ₱${l.amount.toLocaleString()} loan for ${l.loanerName || 'yourself'} is ready.`, 
-        icon: Clock, 
+        id: `mem-ap-${l.id}`, 
+        title: 'Good News: Loan Approved!', 
+        description: `Your request for ₱${l.amount.toLocaleString()} has been approved.`, 
+        icon: CheckCircle2, 
         href: '/dashboard/member',
-        category: 'approval'
+        category: 'status'
       })),
       ...myRejected.map(l => ({ 
-        id: `mrj-${l.id}`, 
-        title: 'Loan Request Rejected', 
-        description: `Your request for "${l.purpose}" was not approved. Click to see notes.`, 
+        id: `mem-rj-${l.id}`, 
+        title: 'Loan Update: Rejected', 
+        description: `Your request for ${l.purpose} was not approved by administration.`, 
         icon: X, 
         href: '/dashboard/member',
         category: 'status'
       })),
+      ...myLate.map(l => ({
+        id: `mem-lt-${l.id}`,
+        title: 'Late Payment Penalty',
+        description: `A late payment status was recorded for your loan. A 10% penalty may apply.`,
+        icon: AlertCircle,
+        href: '/dashboard/member',
+        category: 'penalty'
+      }))
     ];
-  }, [loans]);
+  }, [loans, isAdmin]);
 
   const allNotifications = isAdmin ? adminNotifications : memberNotifications;
   const activeNotifications = allNotifications.filter(n => !dismissedIds.has(n.id));
@@ -292,7 +307,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             >
                               <div className={cn(
                                 "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
-                                n.category === 'due' 
+                                n.category === 'due' || n.category === 'penalty'
                                   ? "bg-red-50 text-red-600 border-red-100" 
                                   : "bg-blue-50 text-blue-600 border-blue-100"
                               )}>
@@ -304,7 +319,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <div className="pt-1">
                                   <span className={cn(
                                     "text-[9px] uppercase font-bold px-1.5 py-0.5 rounded",
-                                    n.category === 'due' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                    n.category === 'due' || n.category === 'penalty' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
                                   )}>
                                     {n.category}
                                   </span>
@@ -349,7 +364,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         asChild
                       >
                         <Link href={isAdmin ? "/dashboard/admin/ledger" : "/dashboard/member"}>
-                          View Full History
+                          View Details
                         </Link>
                       </Button>
                     </div>
