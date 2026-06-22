@@ -117,7 +117,7 @@ export default function LendersDirectoryPage() {
                       <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{lender.email}</TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">{formatDate(lender.joinDate)}</TableCell>
                       <TableCell className="hidden sm:table-cell text-right font-semibold text-slate-700">
-                        ₱{(lender.shares || 0).toLocaleString()}
+                        {(lender.shares || 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <Badge 

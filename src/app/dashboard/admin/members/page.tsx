@@ -168,7 +168,7 @@ export default function AdminMembersManagement() {
       member.email,
       member.status || 'pending',
       (member.id || '').substring(0, 8).toUpperCase(),
-      `P${(member.shares || 0).toLocaleString()}`,
+      (member.shares || 0).toLocaleString(),
       `P${(member.totalContributions || 0).toLocaleString()}`,
       `P${(member.profit || 0).toLocaleString()}`,
     ]);
@@ -195,7 +195,7 @@ export default function AdminMembersManagement() {
           new TableCell({ children: [new Paragraph({ text: member.name || 'Anonymous', size: 18 })] }),
           new TableCell({ children: [new Paragraph({ text: member.email, size: 18 })] }),
           new TableCell({ children: [new Paragraph({ text: member.status || 'pending', size: 18 })] }),
-          new TableCell({ children: [new Paragraph({ text: `P${(member.shares || 0).toLocaleString()}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: (member.shares || 0).toLocaleString(), size: 18 })] }),
           new TableCell({ children: [new Paragraph({ text: `P${(member.totalContributions || 0).toLocaleString()}`, size: 18 })] }),
           new TableCell({ children: [new Paragraph({ text: `P${(member.profit || 0).toLocaleString()}`, size: 18 })] }),
         ]
@@ -411,7 +411,7 @@ export default function AdminMembersManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold text-slate-700">
-                    ₱{(member.shares || 0).toLocaleString()}
+                    {(member.shares || 0).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right font-semibold text-primary">
                     ₱{(member.totalContributions || 0).toLocaleString()}
@@ -451,7 +451,7 @@ export default function AdminMembersManagement() {
             <TableFooter className="bg-slate-50 font-bold border-t-2">
               <TableRow>
                 <TableCell colSpan={3} className="pl-6 py-4 text-slate-800">AGGREGATE TOTALS</TableCell>
-                <TableCell className="text-right text-slate-800">₱{totals.shares.toLocaleString()}</TableCell>
+                <TableCell className="text-right text-slate-800">{totals.shares.toLocaleString()}</TableCell>
                 <TableCell className="text-right text-primary">₱{totals.contributions.toLocaleString()}</TableCell>
                 <TableCell className="text-right text-green-600">₱{totals.profit.toLocaleString()}</TableCell>
                 <TableCell className="pr-6"></TableCell>
@@ -465,7 +465,7 @@ export default function AdminMembersManagement() {
         <div className="p-4 bg-white border rounded-xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Community Shares</p>
-            <p className="text-2xl font-bold text-slate-800">₱{totals.shares.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-slate-800">{totals.shares.toLocaleString()}</p>
           </div>
           <Coins className="h-8 w-8 text-primary/20" />
         </div>
