@@ -70,7 +70,8 @@ export default function LoanRequestPage() {
   // Filter out current user from comaker list
   const availableComakers = useMemo(() => {
     if (!members || !user) return [];
-    return members.filter(m => m.id !== user.uid);
+    // We filter by email as it's the unique identifier across different doc creation methods
+    return members.filter(m => m.email !== user.email);
   }, [members, user]);
 
   // Dynamic Probability Logic
@@ -117,7 +118,7 @@ export default function LoanRequestPage() {
 
     const loanData = {
       memberId: user.uid,
-      comakerId: comakerId || null,
+      comakerId: comakerId === 'none' ? null : (comakerId || null),
       loanerName: loanerName,
       amount: amount,
       status: 'pending',
@@ -199,7 +200,12 @@ export default function LoanRequestPage() {
                     <SelectContent>
                       <SelectItem value="none">No Co-Maker</SelectItem>
                       {availableComakers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        <SelectItem key={m.id} value={m.id}>
+                          <div className="flex flex-col text-left">
+                            <span className="font-bold">{m.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{m.email}</span>
+                          </div>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
