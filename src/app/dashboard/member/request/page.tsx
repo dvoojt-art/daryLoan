@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection } from '@/firebase';
+import { collection, addDoc, query, where } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -44,6 +44,38 @@ export default function LoanRequestPage() {
   // Base monthly rate is 10%
   const monthlyInterestRate = 0.10;
   const { toast } = useToast();
+
+  // Real-time Contributions Query for Consistency Check
+  const contributionsQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'contributions'),
+      where('memberId', '==', user.uid)
+    );
+  }, [firestore, user]);
+
+  const { data: contributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
+
+  // Dynamic Probability Logic
+  const { consistencyScore, probabilityResult } = useMemo(() => {
+    if (!contributions || contributions.length === 0) {
+      return { consistencyScore: 0, probabilityResult: "Review" };
+    }
+    
+    // Simple consistency logic for prototype: 
+    // 5+ contributions = 95% consistency
+    // 3-4 contributions = 85% consistency
+    // 1-2 contributions = 60% consistency
+    const count = contributions.length;
+    let score = 0;
+    if (count >= 5) score = 0.95;
+    else if (count >= 3) score = 0.85;
+    else score = 0.60;
+
+    const result = score > 0.8 ? `${(score * 100).toFixed(0)}%` : "Review";
+    
+    return { consistencyScore: score, probabilityResult: result };
+  }, [contributions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,7 +258,7 @@ export default function LoanRequestPage() {
             term={term}
           />
 
-          <Card className="bg-primary/5 border-primary/10">
+          <Card className="bg-primary/5 border-primary/10 overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
@@ -238,13 +270,33 @@ export default function LoanRequestPage() {
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Member contribution consistency is evaluated for instant probability.
                 </p>
-                <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500">
-                  =IF(ACCOUNT_CONSISTENCY &gt; 0.8, "85%", "Review")
+                <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap">
+                  =IF(CONSISTENCY &gt; 0.8, "{probabilityResult}", "Review")
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700">Result:</span>
-                  <span className="text-lg font-headline font-bold text-primary">85%</span>
+                  {contributionsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <span className={`text-lg font-headline font-bold ${probabilityResult === 'Review' ? 'text-accent' : 'text-primary'}`}>
+                      {probabilityResult}
+                    </span>
+                  )}
                 </div>
+                {consistencyScore > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground">
+                      <span>Consistency</span>
+                      <span>{(consistencyScore * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-500" 
+                        style={{ width: `${consistencyScore * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
