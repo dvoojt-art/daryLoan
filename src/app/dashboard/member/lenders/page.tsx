@@ -16,7 +16,6 @@ export default function LendersDirectoryPage() {
   const firestore = useFirestore();
 
   // Fetch all users and filter client-side for immediate real-time synchronization
-  // This avoids index delays when new members are added in the Admin Portal
   const usersQuery = useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
@@ -35,16 +34,20 @@ export default function LendersDirectoryPage() {
     return `${month}-${day}-${year}`;
   };
 
-  // Filter for members and apply search input on the client side
+  // Filter for members and apply search input on the client side with robust checks
   const filteredMembers = useMemo(() => {
     if (!allUsers) return [];
     
+    const searchLower = search.toLowerCase().trim();
+    
     return allUsers
       .filter(m => m.role === 'member')
-      .filter(m => 
-        (m.name?.toLowerCase().includes(search.toLowerCase()) || 
-         m.email?.toLowerCase().includes(search.toLowerCase()))
-      )
+      .filter(m => {
+        if (!searchLower) return true;
+        const name = (m.name || '').toLowerCase();
+        const email = (m.email || '').toLowerCase();
+        return name.includes(searchLower) || email.includes(searchLower);
+      })
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [allUsers, search]);
 

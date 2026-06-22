@@ -60,7 +60,6 @@ export default function LoanRequestPage() {
   const { data: contributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
 
   // Fetch all users to find members for comaker selection
-  // Using a broad query to ensure immediate synchronization without complex index requirements
   const membersQuery = useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
@@ -72,7 +71,12 @@ export default function LoanRequestPage() {
   const availableComakers = useMemo(() => {
     if (!allUsers || !user) return [];
     return allUsers
-      .filter(u => u.role === 'member' && u.email !== user.email && u.status === 'active')
+      .filter(u => {
+        const isMember = u.role === 'member';
+        const notMe = u.id !== user.uid && u.email !== user.email;
+        const isActive = (u.status || 'active') === 'active';
+        return isMember && notMe && isActive;
+      })
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [allUsers, user]);
 
@@ -121,13 +125,13 @@ export default function LoanRequestPage() {
     const loanData = {
       memberId: user.uid,
       comakerId: comakerId === 'none' ? null : (comakerId || null),
-      loanerName: loanerName,
+      loanerName: loanerName.trim(),
       amount: amount,
       status: 'pending',
       requestDate: new Date().toISOString().split('T')[0],
       interestRate: storedInterestRate,
       termMonths: term,
-      purpose: purpose,
+      purpose: purpose.trim(),
     };
 
     const loansCollection = collection(firestore, 'loans');
@@ -295,7 +299,9 @@ export default function LoanRequestPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest mb-2">
             <div className="bg-primary/10 p-1.5 rounded-lg">
-              <FunctionSquare className="h-4 w-4" />
+              <div className="flex items-center justify-center">
+                <FunctionSquare className="h-4 w-4" />
+              </div>
             </div>
             Live Formula Engine
           </div>

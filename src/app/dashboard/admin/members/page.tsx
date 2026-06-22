@@ -168,8 +168,8 @@ export default function AdminMembersManagement() {
     }
 
     const memberData = {
-      name: newMember.name,
-      email: newMember.email,
+      name: newMember.name.trim(),
+      email: newMember.email.trim(),
       role: 'member',
       totalContributions: parseFloat(newMember.contributions) || 0,
       joinDate: new Date().toISOString().split('T')[0],
@@ -186,7 +186,7 @@ export default function AdminMembersManagement() {
         setNewMember({ name: '', email: '', shares: '', contributions: '' });
         toast({
           title: "Member Added",
-          description: `Successfully onboarded ${newMember.name}.`,
+          description: `Successfully onboarded ${memberData.name}.`,
         });
       })
       .catch(async (e) => {
@@ -201,10 +201,12 @@ export default function AdminMembersManagement() {
 
   const filteredMembers = useMemo(() => {
     if (!members) return [];
-    return members.filter((m: any) => 
-      m.name?.toLowerCase().includes(search.toLowerCase()) || 
-      m.email?.toLowerCase().includes(search.toLowerCase())
-    );
+    const searchLower = search.toLowerCase().trim();
+    return members.filter((m: any) => {
+      const name = (m.name || '').toLowerCase();
+      const email = (m.email || '').toLowerCase();
+      return name.includes(searchLower) || email.includes(searchLower);
+    });
   }, [members, search]);
 
   const totals = useMemo(() => {
