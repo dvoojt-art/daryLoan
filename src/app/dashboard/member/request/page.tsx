@@ -22,7 +22,8 @@ import {
   Info, 
   FunctionSquare, 
   Loader2, 
-  User
+  User,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -57,9 +58,9 @@ export default function LoanRequestPage() {
   const { data: contributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
 
   // Dynamic Probability Logic
-  const { consistencyScore, probabilityResult } = useMemo(() => {
+  const { consistencyScore, probabilityResult, isOverLimit } = useMemo(() => {
     if (!contributions || contributions.length === 0) {
-      return { consistencyScore: 0, probabilityResult: "Review" };
+      return { consistencyScore: 0, probabilityResult: "Review", isOverLimit: amount > 30000 };
     }
     
     // Simple consistency logic for prototype: 
@@ -72,10 +73,12 @@ export default function LoanRequestPage() {
     else if (count >= 3) score = 0.85;
     else score = 0.60;
 
-    const result = score > 0.8 ? `${(score * 100).toFixed(0)}%` : "Review";
+    // Rule: Exceeding 30,000 always triggers manual review
+    const overLimit = amount > 30000;
+    const result = (score > 0.8 && !overLimit) ? `${(score * 100).toFixed(0)}%` : "Review";
     
-    return { consistencyScore: score, probabilityResult: result };
-  }, [contributions]);
+    return { consistencyScore: score, probabilityResult: result, isOverLimit: overLimit };
+  }, [contributions, amount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,18 +185,27 @@ export default function LoanRequestPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <Label>Requested Amount (₱)</Label>
-                  <span className="text-lg font-headline font-bold text-primary">₱{amount.toLocaleString()}</span>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-lg font-headline font-bold ${amount > 30000 ? 'text-accent' : 'text-primary'}`}>
+                      ₱{amount.toLocaleString()}
+                    </span>
+                    {amount > 30000 && (
+                      <span className="text-[10px] font-bold text-accent uppercase flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Manual Approval Required
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Slider 
                   value={[amount]} 
                   onValueChange={(v) => setAmount(v[0])} 
                   min={500} 
-                  max={30000} 
+                  max={50000} 
                   step={500} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Min: ₱500</span>
-                  <span>Max: ₱30,000</span>
+                  <span>Max: ₱50,000</span>
                 </div>
               </div>
 
@@ -268,10 +280,10 @@ export default function LoanRequestPage() {
             <CardContent>
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Member contribution consistency is evaluated for instant probability.
+                  Member contribution consistency and loan limits are evaluated for instant probability.
                 </p>
                 <div className="bg-white/50 p-2 rounded border font-code text-[10px] text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap">
-                  =IF(CONSISTENCY &gt; 0.8, "{probabilityResult}", "Review")
+                  =IF(AND(CONSISTENCY &gt; 0.8, AMOUNT &lt;= 30000), "{probabilityResult}", "Review")
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-700">Result:</span>
@@ -283,6 +295,9 @@ export default function LoanRequestPage() {
                     </span>
                   )}
                 </div>
+                {isOverLimit && (
+                  <p className="text-[9px] text-accent font-bold uppercase italic leading-none">* Subject to Approval (Exceeds ₱30k limit)</p>
+                )}
                 {consistencyScore > 0 && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground">
