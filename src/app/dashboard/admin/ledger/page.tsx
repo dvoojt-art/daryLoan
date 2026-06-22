@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -44,7 +45,9 @@ import {
   Plus,
   MessageSquareText,
   AlertCircle,
-  Loader2
+  Loader2,
+  FileText,
+  FileBox
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -206,6 +209,101 @@ export default function AdminLedgerPage() {
     }), { amount: 0, interest: 0, total: 0 });
   }, [filteredLedger]);
 
+  const handleExportPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+
+    const doc = new jsPDF('landscape');
+    doc.setFontSize(18);
+    doc.text('Master Financial Ledger', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    const tableData = filteredLedger.map(tx => [
+      tx.memberName,
+      tx.purpose,
+      `P${tx.amount.toLocaleString()}`,
+      `P${tx.interest.toLocaleString()}`,
+      `P${tx.total.toLocaleString()}`,
+      `${tx.month1} ${tx.month1Date ? `(${tx.month1Date})` : ''}`,
+      `${tx.month2} ${tx.month2Date ? `(${tx.month2Date})` : ''}`,
+      `${tx.month3} ${tx.month3Date ? `(${tx.month3Date})` : ''}`,
+    ]);
+
+    autoTable(doc, {
+      head: [['Member', 'Purpose', 'Principal', 'Interest', 'Total', 'Month 1', 'Month 2', 'Month 3']],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [1, 6, 66] }, // DaryLoan Navy
+    });
+
+    doc.save('DaryLoan-Master-Ledger.pdf');
+    toast({ title: "PDF Export Complete", description: "Your ledger report is ready." });
+  };
+
+  const handleExportDOCX = async () => {
+    const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType } = await import('docx');
+    const { saveAs } = await import('file-saver');
+
+    const tableRows = filteredLedger.map(tx => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ text: tx.memberName, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `P${tx.amount.toLocaleString()}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `P${tx.interest.toLocaleString()}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `P${tx.total.toLocaleString()}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: tx.month1, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: tx.month2, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: tx.month3, size: 18 })] }),
+        ]
+      })
+    );
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "Master Financial Ledger",
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+          }),
+          new Paragraph({
+            text: `Report Generated: ${new Date().toLocaleDateString()}`,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 },
+          }),
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            rows: [
+              new TableRow({
+                tableHeader: true,
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Member", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Principal", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Interest", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Total", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "M1", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "M2", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "M3", bold: true })] }),
+                ],
+              }),
+              ...tableRows,
+            ],
+          }),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, "DaryLoan-Master-Ledger.docx");
+    toast({ title: "Word Export Complete", description: "Your ledger report is ready." });
+  };
+
   const StatusDropdown = ({ id, monthKey, currentStatus }: { id: string, monthKey: string, currentStatus: string }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -236,7 +334,21 @@ export default function AdminLedgerPage() {
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Real-time oversight of community capital flows</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="h-10"><Download className="mr-2 h-4 w-4" /> Export</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-10">
+                <Download className="mr-2 h-4 w-4" /> Export <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                <FileText className="h-4 w-4 text-red-500" /> Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportDOCX} className="gap-2 cursor-pointer">
+                <FileBox className="h-4 w-4 text-blue-500" /> Export as Word (.docx)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button className="bg-primary h-10" onClick={() => setIsAddDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Record</Button>
         </div>
       </div>
