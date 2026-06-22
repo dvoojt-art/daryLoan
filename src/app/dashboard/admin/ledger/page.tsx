@@ -24,6 +24,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -69,6 +79,7 @@ export default function AdminLedgerPage() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const firestore = useFirestore();
 
@@ -83,6 +94,7 @@ export default function AdminLedgerPage() {
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -164,11 +176,18 @@ export default function AdminLedgerPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (!firestore) return;
-    const loanRef = doc(firestore, 'loans', id);
+  const handleDeleteClick = (id: string) => {
+    setDeletingId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!firestore || !deletingId) return;
+    const loanRef = doc(firestore, 'loans', deletingId);
     deleteDoc(loanRef).then(() => {
       toast({ title: "Record Deleted", variant: "destructive" });
+      setIsDeleteDialogOpen(false);
+      setDeletingId(null);
     });
   };
 
@@ -450,7 +469,7 @@ export default function AdminLedgerPage() {
                     <TableCell className="text-right pr-6">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => { setEditingId(tx.id); setFormState({ ...tx, amount: tx.amount.toString(), termMonths: tx.termMonths.toString() }); setIsEditDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(tx.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(tx.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -506,6 +525,24 @@ export default function AdminLedgerPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently remove this ledger record from the database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setDeletingId(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
