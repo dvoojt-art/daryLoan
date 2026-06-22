@@ -30,6 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
@@ -47,7 +53,8 @@ import {
   AlertCircle,
   Loader2,
   FileText,
-  FileBox
+  FileBox,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -55,6 +62,7 @@ import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, doc, updateDoc, deleteDoc, addDoc, orderBy } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format } from 'date-fns';
 
 export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
@@ -307,9 +315,6 @@ export default function AdminLedgerPage() {
     toast({ title: "Word Export Complete", description: "Your ledger report is ready." });
   };
 
-  // Days 1-31 for the Date Select
-  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
-
   const StatusSelect = ({ id, monthKey, currentStatus }: { id: string, monthKey: string, currentStatus: string }) => (
     <Select value={currentStatus} onValueChange={(v) => handleStatusChange(id, monthKey, v)}>
       <SelectTrigger className="h-7 w-24 mx-auto border-none shadow-none focus:ring-0">
@@ -330,16 +335,32 @@ export default function AdminLedgerPage() {
   );
 
   const DateSelect = ({ id, monthDateKey, currentDate }: { id: string, monthDateKey: string, currentDate: string }) => (
-    <Select value={currentDate || ''} onValueChange={(v) => handleDateUpdate(id, monthDateKey, v)}>
-      <SelectTrigger className="h-6 w-16 mx-auto text-[10px] text-center border-none bg-slate-50 shadow-none font-bold">
-        <SelectValue placeholder="Day" />
-      </SelectTrigger>
-      <SelectContent className="min-w-[4rem]">
-        {days.map(day => (
-          <SelectItem key={day} value={day} className="text-xs">{day}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          className={cn(
+            "h-6 w-24 mx-auto text-[10px] text-center border-none bg-slate-50 shadow-none font-bold px-1 flex items-center justify-center",
+            !currentDate && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-1 h-3 w-3" />
+          {currentDate ? format(new Date(currentDate), "MMM dd, yyyy") : "Pick Date"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="center">
+        <Calendar
+          mode="single"
+          selected={currentDate ? new Date(currentDate) : undefined}
+          onSelect={(date) => {
+            if (date) {
+              handleDateUpdate(id, monthDateKey, date.toISOString().split('T')[0]);
+            }
+          }}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
   );
 
   if (!mounted) return null;
