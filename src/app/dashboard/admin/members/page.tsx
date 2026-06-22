@@ -17,6 +17,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { 
   Search, 
@@ -28,7 +34,10 @@ import {
   TrendingUp,
   Wallet,
   Coins,
-  Loader2
+  Loader2,
+  FileText,
+  FileBox,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -145,6 +154,98 @@ export default function AdminMembersManagement() {
     }), { shares: 0, contributions: 0, profit: 0 });
   }, [filteredMembers]);
 
+  const handleExportPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+
+    const doc = new jsPDF('landscape');
+    doc.setFontSize(18);
+    doc.text('Member Insight Hub - Community Directory', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    const tableData = filteredMembers.map((member: any) => [
+      member.name || 'Anonymous',
+      member.email,
+      member.status || 'pending',
+      (member.id || '').substring(0, 8).toUpperCase(),
+      `P${(member.shares || 0).toLocaleString()}`,
+      `P${(member.totalContributions || 0).toLocaleString()}`,
+      `P${(member.profit || 0).toLocaleString()}`,
+    ]);
+
+    autoTable(doc, {
+      head: [['Name', 'Email', 'Status', 'Member ID', 'Shares', 'Contributions', 'Profits']],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [1, 6, 66] }, // DaryLoan Navy
+    });
+
+    doc.save('DaryLoan-Member-Directory.pdf');
+    toast({ title: "PDF Export Complete", description: "The member directory report is ready." });
+  };
+
+  const handleExportDOCX = async () => {
+    const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType } = await import('docx');
+    const { saveAs } = await import('file-saver');
+
+    const tableRows = filteredMembers.map((member: any) => 
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ text: member.name || 'Anonymous', size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: member.email, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: member.status || 'pending', size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `P${(member.shares || 0).toLocaleString()}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `P${(member.totalContributions || 0).toLocaleString()}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `P${(member.profit || 0).toLocaleString()}`, size: 18 })] }),
+        ]
+      })
+    );
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "Community Member Directory",
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+          }),
+          new Paragraph({
+            text: `Report Generated: ${new Date().toLocaleDateString()}`,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 },
+          }),
+          new Table({
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
+            },
+            rows: [
+              new TableRow({
+                tableHeader: true,
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Name", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Email", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Status", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Shares", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Contributions", bold: true })] }),
+                  new TableCell({ children: [new Paragraph({ text: "Profits", bold: true })] }),
+                ],
+              }),
+              ...tableRows,
+            ],
+          }),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, "DaryLoan-Member-Directory.docx");
+    toast({ title: "Word Export Complete", description: "The member directory report is ready." });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -155,9 +256,21 @@ export default function AdminMembersManagement() {
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Manage your centralized community member database</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="h-10">
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-10">
+                <Download className="mr-2 h-4 w-4" /> Export <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+                <FileText className="h-4 w-4 text-red-500" /> Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportDOCX} className="gap-2 cursor-pointer">
+                <FileBox className="h-4 w-4 text-blue-500" /> Export as Word (.docx)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
