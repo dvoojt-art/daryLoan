@@ -150,7 +150,10 @@ export default function AdminLedgerPage() {
   const handleDateUpdate = (loanId: string, monthDateKey: string, newDate: string) => {
     if (!firestore) return;
     const loanRef = doc(firestore, 'loans', loanId);
-    updateDoc(loanRef, { [monthDateKey]: newDate });
+    updateDoc(loanRef, { [monthDateKey]: newDate }).catch(async (e) => {
+      const error = new FirestorePermissionError({ path: loanRef.path, operation: 'update' });
+      errorEmitter.emit('permission-error', error);
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -304,24 +307,39 @@ export default function AdminLedgerPage() {
     toast({ title: "Word Export Complete", description: "Your ledger report is ready." });
   };
 
-  const StatusDropdown = ({ id, monthKey, currentStatus }: { id: string, monthKey: string, currentStatus: string }) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="focus:outline-none group flex items-center justify-center gap-1 mx-auto hover:opacity-80">
+  // Days 1-31 for the Date Select
+  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+
+  const StatusSelect = ({ id, monthKey, currentStatus }: { id: string, monthKey: string, currentStatus: string }) => (
+    <Select value={currentStatus} onValueChange={(v) => handleStatusChange(id, monthKey, v)}>
+      <SelectTrigger className="h-7 w-24 mx-auto border-none shadow-none focus:ring-0">
+        <div className="flex justify-center w-full">
           <Badge variant="outline" className={cn(
-            "text-[10px] font-bold uppercase",
+            "text-[9px] font-bold uppercase",
             currentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" :
             currentStatus === 'late' ? "bg-red-50 text-red-700 border-red-200" : "bg-slate-50 text-slate-400"
           )}>{currentStatus}</Badge>
-          <ChevronDown className="h-3 w-3 text-slate-400" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="center">
+        </div>
+      </SelectTrigger>
+      <SelectContent>
         {['paid', 'late', 'pending'].map(s => (
-          <DropdownMenuItem key={s} onClick={() => handleStatusChange(id, monthKey, s)} className="capitalize text-xs font-bold">{s}</DropdownMenuItem>
+          <SelectItem key={s} value={s} className="capitalize text-xs font-bold">{s}</SelectItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </SelectContent>
+    </Select>
+  );
+
+  const DateSelect = ({ id, monthDateKey, currentDate }: { id: string, monthDateKey: string, currentDate: string }) => (
+    <Select value={currentDate || ''} onValueChange={(v) => handleDateUpdate(id, monthDateKey, v)}>
+      <SelectTrigger className="h-6 w-16 mx-auto text-[10px] text-center border-none bg-slate-50 shadow-none font-bold">
+        <SelectValue placeholder="Day" />
+      </SelectTrigger>
+      <SelectContent className="min-w-[4rem]">
+        {days.map(day => (
+          <SelectItem key={day} value={day} className="text-xs">{day}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 
   if (!mounted) return null;
@@ -392,20 +410,20 @@ export default function AdminLedgerPage() {
                     <TableCell className="font-bold text-slate-900">₱{tx.total.toLocaleString()}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusDropdown id={tx.id} monthKey="month1" currentStatus={tx.month1} />
-                        <Input className="h-6 w-20 text-[9px] text-center border-none bg-slate-50" value={tx.month1Date || ''} placeholder="Date" onChange={(e) => handleDateUpdate(tx.id, 'month1Date', e.target.value)} />
+                        <StatusSelect id={tx.id} monthKey="month1" currentStatus={tx.month1} />
+                        <DateSelect id={tx.id} monthDateKey="month1Date" currentDate={tx.month1Date} />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusDropdown id={tx.id} monthKey="month2" currentStatus={tx.month2} />
-                        <Input className="h-6 w-20 text-[9px] text-center border-none bg-slate-50" value={tx.month2Date || ''} placeholder="Date" onChange={(e) => handleDateUpdate(tx.id, 'month2Date', e.target.value)} />
+                        <StatusSelect id={tx.id} monthKey="month2" currentStatus={tx.month2} />
+                        <DateSelect id={tx.id} monthDateKey="month2Date" currentDate={tx.month2Date} />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <StatusDropdown id={tx.id} monthKey="month3" currentStatus={tx.month3} />
-                        <Input className="h-6 w-20 text-[9px] text-center border-none bg-slate-50" value={tx.month3Date || ''} placeholder="Date" onChange={(e) => handleDateUpdate(tx.id, 'month3Date', e.target.value)} />
+                        <StatusSelect id={tx.id} monthKey="month3" currentStatus={tx.month3} />
+                        <DateSelect id={tx.id} monthDateKey="month3Date" currentDate={tx.month3Date} />
                       </div>
                     </TableCell>
                     <TableCell className="text-right pr-6">
