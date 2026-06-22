@@ -22,7 +22,8 @@ import {
   Loader2,
   ChevronDown,
   FileText,
-  FileBox
+  FileBox,
+  Wallet
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -74,6 +75,8 @@ export default function AdminDashboard() {
     const activeMembers = members.filter(m => m.status === 'active' && m.role === 'member');
     const pendingMembers = members.filter(m => m.status === 'pending' && m.role === 'member');
     
+    const totalCapital = members.reduce((acc, m) => acc + (m.totalContributions || 0), 0);
+    
     const totalDisbursed = loans
       .filter(l => ['approved', 'repaid', 'overdue'].includes(l.status))
       .reduce((acc, l) => acc + (l.amount || 0), 0);
@@ -90,6 +93,7 @@ export default function AdminDashboard() {
       overdueCount: overdue.length,
       activeMembersCount: activeMembers.length,
       pendingMembersCount: pendingMembers.length,
+      totalCapital,
       totalDisbursed,
       estimatedInterest,
     };
@@ -128,6 +132,7 @@ export default function AdminDashboard() {
       startY: 50,
       head: [['Metric', 'Value', 'Status']],
       body: [
+        ['Total Capital Pool', `P${stats.totalCapital.toLocaleString()}`, 'Available'],
         ['Active Members', stats.activeMembersCount.toString(), 'Verified'],
         ['Capital Disbursed', `P${stats.totalDisbursed.toLocaleString()}`, 'Circulating'],
         ['Estimated Yield', `P${stats.estimatedInterest.toLocaleString()}`, 'Projected'],
@@ -189,6 +194,7 @@ export default function AdminDashboard() {
                   new TableCell({ children: [new Paragraph({ text: "Value", bold: true })], shading: { fill: "F2F2F2" } }),
                 ],
               }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph("Total Community Capital")] }), new TableCell({ children: [new Paragraph(`P${stats.totalCapital.toLocaleString()}`)] })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Active Members")] }), new TableCell({ children: [new Paragraph(stats.activeMembersCount.toString())] })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Capital Disbursed")] }), new TableCell({ children: [new Paragraph(`P${stats.totalDisbursed.toLocaleString()}`)] })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Estimated Yield")] }), new TableCell({ children: [new Paragraph(`P${stats.estimatedInterest.toLocaleString()}`)] })] }),
@@ -238,7 +244,7 @@ export default function AdminDashboard() {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="bg-primary shadow-lg h-11 px-6 gap-2">
+            <Button className="bg-primary shadow-lg h-11 px-6 gap-2 text-white">
               <Download className="h-4 w-4" /> Export Master Report <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -272,8 +278,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {[
+          { label: 'Total Capital', value: `₱${stats.totalCapital.toLocaleString()}`, sub: 'Member contributions', icon: Wallet, color: 'text-primary' },
           { label: 'Active Members', value: stats.activeMembersCount, sub: 'Verified lenders', icon: Users, color: 'text-primary' },
           { label: 'Capital Disbursed', value: `₱${stats.totalDisbursed.toLocaleString()}`, sub: 'Principal in circulation', icon: HandCoins, color: 'text-accent' },
           { label: 'Estimated Yield', value: `₱${stats.estimatedInterest.toLocaleString()}`, sub: 'Calculated 10% monthly', icon: TrendingUp, color: 'text-green-500' },
@@ -285,7 +292,7 @@ export default function AdminDashboard() {
               <s.icon className={cn("h-4 w-4", s.color)} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{s.value}</div>
+              <div className="text-2xl font-bold">{s.value}</div>
               <p className="text-[10px] opacity-70 font-medium mt-1">{s.sub}</p>
             </CardContent>
           </Card>
