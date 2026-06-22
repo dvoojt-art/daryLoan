@@ -58,7 +58,7 @@ export default function LoanRequestPage() {
   const { data: contributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
 
   // Dynamic Probability Logic
-  const { consistencyScore, probabilityResult, isOverLimit } = useMemo(() => {
+  const { consistencyScore, probabilityResult, isAtLimit } = useMemo(() => {
     // Consistency calculation for the progress bar
     const count = contributions?.length || 0;
     let score = 0;
@@ -67,20 +67,13 @@ export default function LoanRequestPage() {
     else if (count > 0) score = 0.60;
     else score = 0;
 
-    const overLimit = amount > 30000;
+    const atLimit = amount >= 30000;
     
     // Result logic based on 30k limit percentage
-    // If amount is 0, show 0%. 30,000 = 100%. 15,000 = 50%.
-    // If > 30,000, show "Review"
-    let result;
-    if (overLimit) {
-      result = "Review";
-    } else {
-      const percentage = Math.round((amount / 30000) * 100);
-      result = `${percentage}%`;
-    }
+    const percentage = Math.round((amount / 30000) * 100);
+    const result = `${percentage}%`;
     
-    return { consistencyScore: score, probabilityResult: result, isOverLimit: overLimit };
+    return { consistencyScore: score, probabilityResult: result, isAtLimit: atLimit };
   }, [contributions, amount]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,8 +102,6 @@ export default function LoanRequestPage() {
     setIsSubmitting(true);
 
     // Calculate specific interest rate to store in database
-    // For 7 days (0.25 term), interest is 5% total
-    // For months, interestRate stores the monthly percentage (10%)
     const storedInterestRate = term === 0.25 ? 0.05 : monthlyInterestRate;
 
     const loanData = {
@@ -189,12 +180,12 @@ export default function LoanRequestPage() {
                 <div className="flex justify-between items-center">
                   <Label>Requested Amount (₱)</Label>
                   <div className="flex flex-col items-end">
-                    <span className={`text-lg font-headline font-bold ${amount > 30000 ? 'text-accent' : 'text-primary'}`}>
+                    <span className={`text-lg font-headline font-bold ${amount >= 30000 ? 'text-accent' : 'text-primary'}`}>
                       ₱{amount.toLocaleString()}
                     </span>
-                    {amount > 30000 && (
+                    {amount >= 30000 && (
                       <span className="text-[10px] font-bold text-accent uppercase flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" /> Manual Approval Required
+                        <AlertCircle className="h-3 w-3" /> Shield Limit Reached
                       </span>
                     )}
                   </div>
@@ -203,12 +194,12 @@ export default function LoanRequestPage() {
                   value={[amount]} 
                   onValueChange={(v) => setAmount(v[0])} 
                   min={0} 
-                  max={50000} 
+                  max={30000} 
                   step={500} 
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Min: ₱0</span>
-                  <span>Max: ₱50,000</span>
+                  <span>Max: ₱30,000</span>
                 </div>
               </div>
 
@@ -293,13 +284,13 @@ export default function LoanRequestPage() {
                   {contributionsLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   ) : (
-                    <span className={`text-lg font-headline font-bold ${probabilityResult === 'Review' ? 'text-accent' : 'text-primary'}`}>
+                    <span className={`text-lg font-headline font-bold ${amount >= 30000 ? 'text-accent' : 'text-primary'}`}>
                       {probabilityResult}
                     </span>
                   )}
                 </div>
-                {isOverLimit && (
-                  <p className="text-[9px] text-accent font-bold uppercase italic leading-none">* Subject to Approval (Exceeds ₱30k limit)</p>
+                {amount >= 30000 && (
+                  <p className="text-[9px] text-accent font-bold uppercase italic leading-none">* Manual Admin Approval Required</p>
                 )}
                 {consistencyScore > 0 && (
                   <div className="space-y-1">
