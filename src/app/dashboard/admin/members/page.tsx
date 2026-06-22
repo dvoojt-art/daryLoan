@@ -17,6 +17,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -48,13 +58,20 @@ import { FirestorePermissionError } from '@/firebase/errors';
 export default function AdminMembersManagement() {
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
   const [newMember, setNewMember] = useState({
     name: '',
     email: '',
     shares: '',
     contributions: '',
   });
+
+  const [editingMember, setEditingMember] = useState<any>(null);
+  const [memberToDelete, setMemberToDelete] = useState<any>(null);
+
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -69,30 +86,71 @@ export default function AdminMembersManagement() {
 
   const { data: members, loading } = useCollection<any>(membersQuery);
 
-  const handleEdit = (member: any) => {
-    toast({
-      title: "Edit Member Profile",
-      description: `Accessing secure records for ${member.name}.`,
+  const handleEditClick = (member: any) => {
+    setEditingMember({
+      ...member,
+      shares: member.shares?.toString() || '0',
+      contributions: member.totalContributions?.toString() || '0'
     });
+    setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (member: any) => {
-    if (!firestore) return;
-    const memberRef = doc(firestore, 'users', member.id);
-    
-    deleteDoc(memberRef).catch(async (e) => {
-      const error = new FirestorePermissionError({
-        path: memberRef.path,
-        operation: 'delete'
-      });
-      errorEmitter.emit('permission-error', error);
-    });
+  const handleUpdateMember = () => {
+    if (!editingMember || !firestore) return;
 
-    toast({
-      title: "Member Removed",
-      description: `${member.name} has been removed from the database.`,
-      variant: "destructive",
-    });
+    const memberRef = doc(firestore, 'users', editingMember.id);
+    const updateData = {
+      name: editingMember.name,
+      email: editingMember.email,
+      shares: parseFloat(editingMember.shares) || 0,
+      totalContributions: parseFloat(editingMember.contributions) || 0,
+    };
+
+    updateDoc(memberRef, updateData)
+      .then(() => {
+        setIsEditDialogOpen(false);
+        setEditingMember(null);
+        toast({
+          title: "Profile Updated",
+          description: `Successfully updated records for ${editingMember.name}.`,
+        });
+      })
+      .catch(async (e) => {
+        const error = new FirestorePermissionError({
+          path: memberRef.path,
+          operation: 'update',
+          requestResourceData: updateData
+        });
+        errorEmitter.emit('permission-error', error);
+      });
+  };
+
+  const handleDeleteClick = (member: any) => {
+    setMemberToDelete(member);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!memberToDelete || !firestore) return;
+    const memberRef = doc(firestore, 'users', memberToDelete.id);
+    
+    deleteDoc(memberRef)
+      .then(() => {
+        setIsDeleteDialogOpen(false);
+        setMemberToDelete(null);
+        toast({
+          title: "Member Removed",
+          description: `${memberToDelete.name} has been removed from the database.`,
+          variant: "destructive",
+        });
+      })
+      .catch(async (e) => {
+        const error = new FirestorePermissionError({
+          path: memberRef.path,
+          operation: 'delete'
+        });
+        errorEmitter.emit('permission-error', error);
+      });
   };
 
   const handleAddMember = () => {
@@ -178,7 +236,7 @@ export default function AdminMembersManagement() {
       body: tableData,
       startY: 35,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [1, 6, 66] }, // DaryLoan Navy
+      headStyles: { fillColor: [1, 6, 66] },
     });
 
     doc.save('DaryLoan-Member-Directory.pdf');
@@ -425,7 +483,7 @@ export default function AdminMembersManagement() {
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
-                        onClick={() => handleEdit(member)}
+                        onClick={() => handleEditClick(member)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -433,7 +491,7 @@ export default function AdminMembersManagement() {
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
-                        onClick={() => handleDelete(member)}
+                        onClick={() => handleDeleteClick(member)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -461,6 +519,81 @@ export default function AdminMembersManagement() {
         </CardContent>
       </Card>
       
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Member Profile</DialogTitle>
+            <DialogDescription>
+              Modify the profile and financial details for this member.
+            </DialogDescription>
+          </DialogHeader>
+          {editingMember && (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input 
+                  id="edit-name" 
+                  value={editingMember.name}
+                  onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input 
+                  id="edit-email" 
+                  type="email"
+                  value={editingMember.email}
+                  onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-shares">Shares</Label>
+                  <Input 
+                    id="edit-shares" 
+                    type="number"
+                    value={editingMember.shares}
+                    onChange={(e) => setEditingMember({ ...editingMember, shares: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-contributions">Contributions</Label>
+                  <Input 
+                    id="edit-contributions" 
+                    type="number"
+                    value={editingMember.contributions}
+                    onChange={(e) => setEditingMember({ ...editingMember, contributions: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateMember}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {memberToDelete?.name} from the community database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMemberToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
         <div className="p-4 bg-white border rounded-xl shadow-sm flex items-center justify-between">
           <div>
