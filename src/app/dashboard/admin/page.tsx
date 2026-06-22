@@ -23,7 +23,8 @@ import {
   FileText,
   FileBox,
   Wallet,
-  Coins
+  Coins,
+  History
 } from 'lucide-react';
 import { 
   DropdownMenu,
