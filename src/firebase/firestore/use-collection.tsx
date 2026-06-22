@@ -12,7 +12,7 @@ import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
 
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
-  const [data, setData] = useState<T[] | null>(null);
+  const [data, setData] = useState<(T & { id: string })[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestorePermissionError | null>(null);
 
@@ -25,12 +25,19 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
     const unsubscribe = onSnapshot(
       query,
       (snapshot: QuerySnapshot<T>) => {
-        setData(snapshot.docs.map((doc) => doc.data()));
+        const docs = snapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+        setData(docs);
         setLoading(false);
       },
       async (serverError: FirestoreError) => {
+        // Safe path extraction
+        const path = (query as any).path || (query as any)._query?.path?.toString() || 'unknown-collection';
+        
         const permissionError = new FirestorePermissionError({
-          path: (query as any)._query?.path?.toString() || 'unknown',
+          path: path,
           operation: 'list',
         });
 

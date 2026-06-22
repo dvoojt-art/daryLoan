@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -96,7 +95,7 @@ export default function AdminMembersManagement() {
   };
 
   const handleUpdateMember = () => {
-    if (!editingMember || !firestore) return;
+    if (!editingMember || !firestore || !editingMember.id) return;
 
     const memberRef = doc(firestore, 'users', editingMember.id);
     const updateData = {
@@ -131,7 +130,11 @@ export default function AdminMembersManagement() {
   };
 
   const confirmDelete = () => {
-    if (!memberToDelete || !firestore) return;
+    if (!memberToDelete || !firestore || !memberToDelete.id) {
+      setIsDeleteDialogOpen(false);
+      return;
+    }
+
     const memberRef = doc(firestore, 'users', memberToDelete.id);
     
     deleteDoc(memberRef)
