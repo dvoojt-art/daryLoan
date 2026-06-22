@@ -19,15 +19,26 @@ import {
   History,
   CheckCircle2,
   MessageSquareText,
-  Loader2
+  Loader2,
+  ChevronDown,
+  FileText,
+  FileBox
 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false);
+  const { toast } = useToast();
   const firestore = useFirestore();
 
   useEffect(() => {
@@ -95,6 +106,126 @@ export default function AdminDashboard() {
     return `${month}-${day}-${year}`;
   };
 
+  const handleExportPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTable = (await import('jspdf-autotable')).default;
+
+    const doc = new jsPDF();
+    doc.setFontSize(22);
+    doc.setTextColor(1, 6, 66); // DaryLoan Navy
+    doc.text('DaryLoan Executive Summary', 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Report Period: FY ${new Date().getFullYear()}`, 14, 33);
+
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text('1. Operational Metrics', 14, 45);
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['Metric', 'Value', 'Status']],
+      body: [
+        ['Active Members', stats.activeMembersCount.toString(), 'Verified'],
+        ['Capital Disbursed', `P${stats.totalDisbursed.toLocaleString()}`, 'Circulating'],
+        ['Estimated Yield', `P${stats.estimatedInterest.toLocaleString()}`, 'Projected'],
+        ['Review Queue', stats.pendingCount.toString(), 'Pending AI'],
+        ['Overdue Accounts', stats.overdueCount.toString(), stats.overdueCount > 0 ? 'High Risk' : 'Healthy'],
+      ],
+      headStyles: { fillColor: [1, 6, 66] },
+    });
+
+    if (recentActivity && recentActivity.length > 0) {
+      doc.text('2. Recent Financial Activity', 14, (doc as any).lastAutoTable.finalY + 15);
+      
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Date', 'Member/Loaner', 'Amount', 'Status', 'Purpose']],
+        body: recentActivity.map((loan: any) => [
+          formatDate(loan.requestDate),
+          loan.loanerName || 'Unknown',
+          `P${loan.amount.toLocaleString()}`,
+          loan.status.toUpperCase(),
+          loan.purpose,
+        ]),
+        headStyles: { fillColor: [1, 6, 66] },
+      });
+    }
+
+    doc.save('DaryLoan-Master-Report.pdf');
+    toast({ title: "Master Report Generated", description: "PDF has been downloaded." });
+  };
+
+  const handleExportDOCX = async () => {
+    const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, TextRun } = await import('docx');
+    const { saveAs } = await import('file-saver');
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "DaryLoan Executive Master Report",
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `Generated: ${new Date().toLocaleString()}`, italics: true }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 },
+          }),
+          new Paragraph({ text: "Operational Metrics Summary", heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 200 } }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Metric", bold: true })], shading: { fill: "F2F2F2" } }),
+                  new TableCell({ children: [new Paragraph({ text: "Value", bold: true })], shading: { fill: "F2F2F2" } }),
+                ],
+              }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph("Active Members")] }), new TableCell({ children: [new Paragraph(stats.activeMembersCount.toString())] })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph("Capital Disbursed")] }), new TableCell({ children: [new Paragraph(`P${stats.totalDisbursed.toLocaleString()}`)] })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph("Estimated Yield")] }), new TableCell({ children: [new Paragraph(`P${stats.estimatedInterest.toLocaleString()}`)] })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph("Review Queue")] }), new TableCell({ children: [new Paragraph(stats.pendingCount.toString())] })] }),
+            ],
+          }),
+          new Paragraph({ text: "Recent Activity Log", heading: HeadingLevel.HEADING_2, spacing: { before: 600, after: 200 } }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Date", bold: true })], shading: { fill: "F2F2F2" } }),
+                  new TableCell({ children: [new Paragraph({ text: "Loaner", bold: true })], shading: { fill: "F2F2F2" } }),
+                  new TableCell({ children: [new Paragraph({ text: "Amount", bold: true })], shading: { fill: "F2F2F2" } }),
+                  new TableCell({ children: [new Paragraph({ text: "Status", bold: true })], shading: { fill: "F2F2F2" } }),
+                ],
+              }),
+              ...(recentActivity || []).map((loan: any) => new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph(formatDate(loan.requestDate))] }),
+                  new TableCell({ children: [new Paragraph(loan.loanerName || 'Unknown')] }),
+                  new TableCell({ children: [new Paragraph(`P${loan.amount.toLocaleString()}`)] }),
+                  new TableCell({ children: [new Paragraph(loan.status.toUpperCase())] }),
+                ]
+              }))
+            ],
+          }),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, "DaryLoan-Master-Report.docx");
+    toast({ title: "Master Report Generated", description: "DOCX has been downloaded." });
+  };
+
   if (!mounted) return null;
 
   return (
@@ -104,7 +235,22 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-headline font-bold text-slate-800 tracking-tight">Admin Command Center</h1>
           <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Mission Control for Community Financial Operations</p>
         </div>
-        <Button className="bg-primary shadow-lg h-11 px-6"><Download className="mr-2 h-4 w-4" /> Export Master Report</Button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="bg-primary shadow-lg h-11 px-6 gap-2">
+              <Download className="h-4 w-4" /> Export Master Report <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={handleExportPDF} className="gap-2 cursor-pointer">
+              <FileText className="h-4 w-4 text-red-500" /> Export as PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportDOCX} className="gap-2 cursor-pointer">
+              <FileBox className="h-4 w-4 text-blue-500" /> Export as Word (.docx)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Alerts */}
@@ -168,7 +314,9 @@ export default function AdminDashboard() {
         <Card className="border-none shadow-sm bg-white">
           <CardHeader><CardTitle className="text-lg font-bold">Recent Financial Activity</CardTitle></CardHeader>
           <CardContent>
-            {recentActivity?.length === 0 ? (
+            {loansLoading ? (
+              <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+            ) : recentActivity?.length === 0 ? (
               <p className="text-center py-10 text-muted-foreground italic text-sm">No recent activity detected.</p>
             ) : (
               <div className="space-y-4">
