@@ -3,7 +3,7 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "Basic profile information for DaryLoan users.",
+      "description": "Comprehensive profile information for DaryLoan users.",
       "type": "object",
       "properties": {
         "email": {
@@ -15,9 +15,35 @@
           "type": "string",
           "enum": ["admin", "member"],
           "description": "The security role of the user."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the member."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "pending"],
+          "description": "The current account status."
+        },
+        "shares": {
+          "type": "number",
+          "description": "Total value of community shares owned."
+        },
+        "profit": {
+          "type": "number",
+          "description": "Total profit distributed to this member."
+        },
+        "joinDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the member joined the community."
+        },
+        "totalContributions": {
+          "type": "number",
+          "description": "Cumulative historical contributions."
         }
       },
-      "required": ["email", "role"]
+      "required": ["email", "role", "name", "status"]
     },
     "Loan": {
       "title": "Loan",

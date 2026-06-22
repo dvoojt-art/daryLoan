@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -26,14 +27,17 @@ import {
   Trash2,
   TrendingUp,
   Wallet,
-  Coins
+  Coins,
+  Loader2
 } from 'lucide-react';
-import { MOCK_MEMBERS, Member } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AdminMembersManagement() {
-  const [members, setMembers] = useState<Member[]>(MOCK_MEMBERS.filter(m => m.role === 'member'));
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -44,20 +48,38 @@ export default function AdminMembersManagement() {
     contributions: '',
   });
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleEdit = (member: Member) => {
+  const membersQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('role', '==', 'member'));
+  }, [firestore]);
+
+  const { data: members, loading } = useCollection<any>(membersQuery);
+
+  const handleEdit = (member: any) => {
     toast({
       title: "Edit Member Profile",
       description: `Accessing secure records for ${member.name}.`,
     });
   };
 
-  const handleDelete = (member: Member) => {
-    setMembers(prev => prev.filter(m => m.id !== member.id));
+  const handleDelete = (member: any) => {
+    if (!firestore) return;
+    const memberRef = doc(firestore, 'users', member.id);
+    
+    deleteDoc(memberRef).catch(async (e) => {
+      const error = new FirestorePermissionError({
+        path: memberRef.path,
+        operation: 'delete'
+      });
+      errorEmitter.emit('permission-error', error);
+    });
+
     toast({
       title: "Member Removed",
       description: `${member.name} has been removed from the database.`,
@@ -66,7 +88,7 @@ export default function AdminMembersManagement() {
   };
 
   const handleAddMember = () => {
-    if (!newMember.name || !newMember.email) {
+    if (!newMember.name || !newMember.email || !firestore) {
       toast({
         title: "Validation Error",
         description: "Please provide both name and email.",
@@ -75,8 +97,7 @@ export default function AdminMembersManagement() {
       return;
     }
 
-    const member: Member = {
-      id: `m-new-${Date.now()}`,
+    const memberData = {
       name: newMember.name,
       email: newMember.email,
       role: 'member',
@@ -87,28 +108,44 @@ export default function AdminMembersManagement() {
       profit: 0,
     };
 
-    setMembers(prev => [...prev, member]);
-    setIsAddDialogOpen(false);
-    setNewMember({ name: '', email: '', shares: '', contributions: '' });
-    
-    toast({
-      title: "Member Added",
-      description: `Successfully onboarded ${newMember.name}.`,
-    });
+    const usersCollection = collection(firestore, 'users');
+
+    addDoc(usersCollection, memberData)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewMember({ name: '', email: '', shares: '', contributions: '' });
+        toast({
+          title: "Member Added",
+          description: `Successfully onboarded ${newMember.name}.`,
+        });
+      })
+      .catch(async (e) => {
+        const error = new FirestorePermissionError({
+          path: usersCollection.path,
+          operation: 'create',
+          requestResourceData: memberData
+        });
+        errorEmitter.emit('permission-error', error);
+      });
   };
 
-  const filteredMembers = members.filter(m => 
-    m.name.toLowerCase().includes(search.toLowerCase()) || 
-    m.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredMembers = useMemo(() => {
+    if (!members) return [];
+    return members.filter((m: any) => 
+      m.name?.toLowerCase().includes(search.toLowerCase()) || 
+      m.email?.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [members, search]);
 
   const totals = useMemo(() => {
-    return filteredMembers.reduce((acc, m) => ({
-      shares: acc.shares + m.shares,
-      contributions: acc.contributions + m.totalContributions,
-      profit: acc.profit + m.profit,
+    return filteredMembers.reduce((acc: any, m: any) => ({
+      shares: acc.shares + (m.shares || 0),
+      contributions: acc.contributions + (m.totalContributions || 0),
+      profit: acc.profit + (m.profit || 0),
     }), { shares: 0, contributions: 0, profit: 0 });
   }, [filteredMembers]);
+
+  if (!mounted) return null;
 
   return (
     <div className="p-6 space-y-6">
@@ -122,70 +159,68 @@ export default function AdminMembersManagement() {
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
           
-          {mounted && (
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-primary h-10 shadow-md">
-                  <UserPlus className="mr-2 h-4 w-4" /> Add New Member
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Register New Member</DialogTitle>
-                  <DialogDescription>
-                    Enter the details for the new community member.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary h-10 shadow-md">
+                <UserPlus className="mr-2 h-4 w-4" /> Add New Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Register New Member</DialogTitle>
+                <DialogDescription>
+                  Enter the details for the new community member.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="e.g. Maria Clara"
+                    value={newMember.name}
+                    onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    placeholder="maria@example.com"
+                    value={newMember.email}
+                    onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="shares">Shares (₱)</Label>
                     <Input 
-                      id="name" 
-                      placeholder="e.g. Maria Clara"
-                      value={newMember.name}
-                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                      id="shares" 
+                      type="number"
+                      placeholder="0"
+                      value={newMember.shares}
+                      onChange={(e) => setNewMember({ ...newMember, shares: e.target.value })}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="contributions">Contributions (₱)</Label>
                     <Input 
-                      id="email" 
-                      type="email"
-                      placeholder="maria@example.com"
-                      value={newMember.email}
-                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                      id="contributions" 
+                      type="number"
+                      placeholder="0"
+                      value={newMember.contributions}
+                      onChange={(e) => setNewMember({ ...newMember, contributions: e.target.value })}
                     />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="shares">Shares (₱)</Label>
-                      <Input 
-                        id="shares" 
-                        type="number"
-                        placeholder="0"
-                        value={newMember.shares}
-                        onChange={(e) => setNewMember({ ...newMember, shares: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="contributions">Contributions (₱)</Label>
-                      <Input 
-                        id="contributions" 
-                        type="number"
-                        placeholder="0"
-                        value={newMember.contributions}
-                        onChange={(e) => setNewMember({ ...newMember, contributions: e.target.value })}
-                      />
-                    </div>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddMember}>Add Member</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddMember}>Add Member</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -220,18 +255,27 @@ export default function AdminMembersManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredMembers.map((member) => (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading members...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredMembers.length > 0 ? filteredMembers.map((member: any) => (
                 <TableRow key={member.id} className="group hover:bg-slate-50/50 transition-colors border-b last:border-0">
                   <TableCell className="py-4 pl-6">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border-2 border-slate-100">
                         <AvatarImage src={`https://picsum.photos/seed/${member.id}/100/100`} />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                          {member.name.substring(0, 2).toUpperCase()}
+                          {(member.name || '??').substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-800">{member.name}</span>
+                        <span className="font-bold text-slate-800">{member.name || 'Anonymous'}</span>
                         <span className="text-[10px] text-muted-foreground truncate">{member.email}</span>
                       </div>
                     </div>
@@ -246,22 +290,22 @@ export default function AdminMembersManagement() {
                           : "bg-yellow-50 text-yellow-700 border-yellow-200"
                       )}
                     >
-                      {member.status}
+                      {member.status || 'pending'}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-mono text-[10px] tracking-tighter uppercase border-slate-200 text-slate-500">
-                      {member.id.toUpperCase()}
+                      {(member.id || 'new').substring(0, 8).toUpperCase()}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold text-slate-700">
-                    ₱{member.shares.toLocaleString()}
+                    ₱{(member.shares || 0).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right font-semibold text-primary">
-                    ₱{member.totalContributions.toLocaleString()}
+                    ₱{(member.totalContributions || 0).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right font-bold text-green-600">
-                    ₱{member.profit.toLocaleString()}
+                    ₱{(member.profit || 0).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex justify-end gap-1">
@@ -284,7 +328,13 @@ export default function AdminMembersManagement() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
+                    No matching members found in the database.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
             <TableFooter className="bg-slate-50 font-bold border-t-2">
               <TableRow>
@@ -296,11 +346,6 @@ export default function AdminMembersManagement() {
               </TableRow>
             </TableFooter>
           </Table>
-          {filteredMembers.length === 0 && (
-            <div className="text-center py-20 bg-slate-50/50">
-              <p className="text-slate-500 font-medium italic">No matching members found in the database.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
       
