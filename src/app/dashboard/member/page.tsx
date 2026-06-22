@@ -35,7 +35,8 @@ import {
   Loader2,
   Wallet,
   Coins,
-  CheckCircle2
+  CheckCircle2,
+  CalendarDays
 } from 'lucide-react';
 import {
   Dialog,
@@ -54,6 +55,7 @@ import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format } from 'date-fns';
 
 export default function MemberDashboard() {
   const { toast } = useToast();
@@ -105,13 +107,13 @@ export default function MemberDashboard() {
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
-    return `${month}-${day}-${year}`;
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      return format(date, "MMM dd, yyyy");
+    } catch (e) {
+      return dateStr || '';
+    }
   };
 
   const handleDeleteLoan = (loanId: string) => {
@@ -177,21 +179,34 @@ export default function MemberDashboard() {
   if (!mounted) return null;
 
   const contributions = liveContributions || [];
-  const totalContributed = profile?.totalContributions || contributions.reduce((acc, c) => acc + c.amount, 0);
-  
-  const activeLoan = loans?.find(l => l.status === 'approved' || l.status === 'overdue');
-  const overdueLoan = loans?.find(l => l.status === 'overdue');
-  const recentlyDecisioned = loans?.find(l => (l.status === 'approved' || l.status === 'rejected') && l.adminNote);
-
   const chartData = contributions.map(c => ({
     date: c.date,
     amount: c.amount,
   }));
 
-  const StatusBadge = ({ status }: { status?: string }) => {
-    if (!status || status === 'pending') return <Badge variant="outline" className="text-[8px] bg-slate-50 text-slate-400 border-slate-100">UNPAID</Badge>;
-    if (status === 'paid') return <Badge variant="outline" className="text-[8px] bg-green-50 text-green-700 border-green-200">PAID</Badge>;
-    if (status === 'late') return <Badge variant="outline" className="text-[8px] bg-red-50 text-red-700 border-red-200">LATE</Badge>;
+  const activeLoan = loans?.find(l => l.status === 'approved' || l.status === 'overdue');
+  const overdueLoan = loans?.find(l => l.status === 'overdue');
+  const recentlyDecisioned = loans?.find(l => (l.status === 'approved' || l.status === 'rejected') && (l.adminNote || l.status === 'approved'));
+
+  const StatusBadge = ({ status, date }: { status?: string, date?: string }) => {
+    if (!status || status === 'pending') return (
+      <div className="flex flex-col items-center">
+        <Badge variant="outline" className="text-[8px] bg-slate-50 text-slate-400 border-slate-100 uppercase">Unpaid</Badge>
+        {date && <span className="text-[7px] text-muted-foreground mt-0.5">{formatDate(date)}</span>}
+      </div>
+    );
+    if (status === 'paid') return (
+      <div className="flex flex-col items-center">
+        <Badge variant="outline" className="text-[8px] bg-green-50 text-green-700 border-green-200 uppercase">Paid</Badge>
+        {date && <span className="text-[7px] text-green-600 mt-0.5 font-medium">{formatDate(date)}</span>}
+      </div>
+    );
+    if (status === 'late') return (
+      <div className="flex flex-col items-center">
+        <Badge variant="outline" className="text-[8px] bg-red-50 text-red-700 border-red-200 uppercase">Late</Badge>
+        {date && <span className="text-[7px] text-red-600 mt-0.5 font-medium">{formatDate(date)}</span>}
+      </div>
+    );
     return null;
   };
 
@@ -200,7 +215,7 @@ export default function MemberDashboard() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-headline font-bold text-slate-800">Member Portal</h1>
-          <p className="text-muted-foreground">Manage your savings and loan applications.</p>
+          <p className="text-muted-foreground">Manage your savings and tracking community credit.</p>
         </div>
         <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold shadow-sm">
           <Link href="/dashboard/member/request">
@@ -249,30 +264,46 @@ export default function MemberDashboard() {
 
       <div className="grid gap-4">
         {overdueLoan && (
-          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-pulse">
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive shadow-md">
             <AlertTriangle className="h-5 w-5" />
-            <AlertTitle className="font-bold uppercase text-xs">Urgent Notice</AlertTitle>
+            <AlertTitle className="font-bold uppercase text-xs">Urgent: Overdue Payment Notice</AlertTitle>
             <AlertDescription className="text-sm">
-              Your loan of ₱{overdueLoan.amount.toLocaleString()} is overdue. Please settle immediately.
+              Your loan of ₱{overdueLoan.amount.toLocaleString()} is currently past its due date. Please coordinate with the community admin immediately.
             </AlertDescription>
           </Alert>
         )}
         
         {recentlyDecisioned && (
           <Alert className={cn(
-            "border-2",
+            "border-2 shadow-sm",
             recentlyDecisioned.status === 'approved' ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
           )}>
-            <MessageSquareText className="h-5 w-5" />
-            <AlertTitle className="font-bold flex items-center gap-2">
-              Admin Decision: {recentlyDecisioned.status.toUpperCase()}
-            </AlertTitle>
-            <AlertDescription className="text-sm space-y-2">
-              <p>Note from Admin: <span className="font-bold italic">"{recentlyDecisioned.adminNote}"</span></p>
-              {recentlyDecisioned.dueDate && recentlyDecisioned.status === 'approved' && (
-                <p className="text-[10px] uppercase font-bold">Release/Payment Schedule: {formatDate(recentlyDecisioned.dueDate)}</p>
-              )}
-            </AlertDescription>
+            <div className="flex gap-4">
+              <div className="p-2 bg-white rounded-full h-fit shadow-sm">
+                {recentlyDecisioned.status === 'approved' ? <CheckCircle2 className="h-6 w-6 text-green-600" /> : <AlertCircle className="h-6 w-6 text-red-600" />}
+              </div>
+              <div className="space-y-1 flex-1">
+                <AlertTitle className="font-bold text-lg">
+                  Loan Request {recentlyDecisioned.status.toUpperCase()}
+                </AlertTitle>
+                <AlertDescription className="text-sm space-y-2">
+                  <p>Request for: <span className="font-bold">₱{recentlyDecisioned.amount.toLocaleString()}</span></p>
+                  {recentlyDecisioned.adminNote ? (
+                    <div className="bg-white/50 p-3 rounded-lg border border-black/5 italic">
+                      " {recentlyDecisioned.adminNote} "
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No additional notes provided by the administrator.</p>
+                  )}
+                  {recentlyDecisioned.dueDate && recentlyDecisioned.status === 'approved' && (
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase pt-1">
+                      <CalendarDays className="h-4 w-4" />
+                      Scheduled Release / First Payment: {formatDate(recentlyDecisioned.dueDate)}
+                    </div>
+                  )}
+                </AlertDescription>
+              </div>
+            </div>
           </Alert>
         )}
       </div>
@@ -314,7 +345,7 @@ export default function MemberDashboard() {
 
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Loan Balance</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Loan Overview</CardTitle>
             <CreditCard className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
@@ -327,85 +358,88 @@ export default function MemberDashboard() {
                 <div>
                   <div className="text-3xl font-headline font-bold text-slate-800">₱{activeLoan.amount.toLocaleString()}</div>
                   <Badge className={cn(
-                    "hover:bg-opacity-80 border-none mt-1 uppercase text-[10px]",
+                    "hover:bg-opacity-80 border-none mt-1 uppercase text-[10px] font-bold",
                     activeLoan.status === 'overdue' ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-                  )}>Status: {activeLoan.status}</Badge>
+                  )}>Current Status: {activeLoan.status}</Badge>
                 </div>
                 
                 <div className="space-y-4 pt-4 border-t">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-muted-foreground uppercase text-[9px]">Repayment Ledger</span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-muted-foreground uppercase text-[9px] tracking-widest">Master Ledger Sync</span>
+                    <Badge variant="outline" className="text-[8px] font-mono border-slate-100">REAL-TIME</Badge>
                   </div>
                   <div className="flex gap-2">
-                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded">
-                      <span className="text-[8px] font-bold text-slate-400">M1</span>
-                      <StatusBadge status={activeLoan.month1} />
+                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded border border-slate-100/50">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">Month 1</span>
+                      <StatusBadge status={activeLoan.month1} date={activeLoan.month1Date} />
                     </div>
-                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded">
-                      <span className="text-[8px] font-bold text-slate-400">M2</span>
-                      <StatusBadge status={activeLoan.month2} />
+                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded border border-slate-100/50">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">Month 2</span>
+                      <StatusBadge status={activeLoan.month2} date={activeLoan.month2Date} />
                     </div>
-                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded">
-                      <span className="text-[8px] font-bold text-slate-400">M3</span>
-                      <StatusBadge status={activeLoan.month3} />
+                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded border border-slate-100/50">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">Month 3</span>
+                      <StatusBadge status={activeLoan.month3} date={activeLoan.month3Date} />
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t text-xs">
-                  <div>
-                    <p className="uppercase font-bold text-muted-foreground text-[9px]">Due Date</p>
-                    <p className="font-semibold">{formatDate(activeLoan.dueDate) || 'Pending Review'}</p>
+                  <div className="space-y-1">
+                    <p className="uppercase font-bold text-muted-foreground text-[9px] tracking-wider">Release Date</p>
+                    <p className="font-bold text-slate-700">{formatDate(activeLoan.dueDate) || 'Pending'}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="uppercase font-bold text-muted-foreground text-[9px]">Term</p>
-                    <p className="font-semibold">{activeLoan.termMonths === 0.25 ? '7 Days' : `${activeLoan.termMonths} Months`}</p>
+                  <div className="text-right space-y-1">
+                    <p className="uppercase font-bold text-muted-foreground text-[9px] tracking-wider">Repayment Term</p>
+                    <p className="font-bold text-slate-700">{activeLoan.termMonths === 0.25 ? '7 Days' : `${activeLoan.termMonths} Months`}</p>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="text-center py-12 space-y-4">
-                <CheckCircle2 className="h-8 w-8 text-green-500/20 mx-auto" />
-                <p className="text-xs text-muted-foreground">No active debts. Your account is clear.</p>
-                <Button asChild size="sm" variant="outline" className="w-full"><Link href="/dashboard/member/request">Request Credit</Link></Button>
+                <CheckCircle2 className="h-10 w-10 text-green-500/20 mx-auto" />
+                <p className="text-xs text-muted-foreground max-w-[180px] mx-auto leading-relaxed">Your credit account is currently clear. No active loans detected.</p>
+                <Button asChild size="sm" variant="outline" className="w-full border-slate-200 hover:bg-slate-50"><Link href="/dashboard/member/request">Request New Loan</Link></Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-none shadow-sm bg-white">
-        <CardHeader>
-          <CardTitle className="text-lg">Loan Request History</CardTitle>
-          <CardDescription>Track the lifecycle of your community credit requests.</CardDescription>
+      <Card className="border-none shadow-sm bg-white overflow-hidden">
+        <CardHeader className="bg-slate-50/50 border-b pb-4">
+          <CardTitle className="text-lg font-bold text-slate-800">Community Loan Ledger</CardTitle>
+          <CardDescription>Track the live status of your requests and admin collection notes.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loansLoading ? (
-            <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+            <div className="p-12 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary/40" /></div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold text-[10px] uppercase">Loaner / Purpose</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase">Principal</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase">Status</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-center">Ledger M1</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-center">Ledger M2</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-center">Ledger M3</TableHead>
-                  <TableHead className="text-right font-bold text-[10px] uppercase pr-6">Actions</TableHead>
+                <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider pl-6">Purpose / Beneficiary</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider">Principal</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider">Application Status</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider text-center">M1</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider text-center">M2</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase tracking-wider text-center">M3</TableHead>
+                  <TableHead className="text-right font-bold text-[10px] uppercase tracking-wider pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loans && loans.length > 0 ? loans.map((l) => (
-                  <TableRow key={l.id} className="group transition-colors border-b">
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-xs">{l.loanerName || 'Self'}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
+                  <TableRow key={l.id} className="group transition-colors border-b last:border-0">
+                    <TableCell className="pl-6 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-slate-800 text-xs">{l.purpose}</span>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase font-medium">
+                          <User className="h-2 w-2" /> For: {l.loanerName || 'Self'}
+                        </span>
                         {l.adminNote && (
-                          <div className="mt-1 flex items-start gap-1 bg-primary/5 p-1 rounded border border-primary/10 max-w-[200px]">
-                            <MessageSquareText className="h-2 w-2 text-primary mt-0.5 shrink-0" />
-                            <span className="text-[9px] text-primary italic font-medium leading-tight">Note: {l.adminNote}</span>
+                          <div className="mt-2 flex items-start gap-2 bg-primary/5 p-2 rounded-md border border-primary/10 max-w-[240px]">
+                            <MessageSquareText className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                            <span className="text-[9px] text-primary italic font-semibold leading-relaxed">Admin: {l.adminNote}</span>
                           </div>
                         )}
                       </div>
@@ -413,32 +447,34 @@ export default function MemberDashboard() {
                     <TableCell className="font-bold text-slate-700 text-xs">₱{l.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn(
-                        "capitalize text-[9px] font-bold",
-                        l.status === 'approved' ? "bg-green-50 text-green-700" : 
-                        l.status === 'pending' ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"
+                        "capitalize text-[9px] font-bold px-3",
+                        l.status === 'approved' ? "bg-green-50 text-green-700 border-green-200" : 
+                        l.status === 'pending' ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-red-50 text-red-700 border-red-200"
                       )}>
                         {l.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center"><StatusBadge status={l.month1} /></TableCell>
-                    <TableCell className="text-center"><StatusBadge status={l.month2} /></TableCell>
-                    <TableCell className="text-center"><StatusBadge status={l.month3} /></TableCell>
+                    <TableCell className="text-center"><StatusBadge status={l.month1} date={l.month1Date} /></TableCell>
+                    <TableCell className="text-center"><StatusBadge status={l.month2} date={l.month2Date} /></TableCell>
+                    <TableCell className="text-center"><StatusBadge status={l.month3} date={l.month3Date} /></TableCell>
                     <TableCell className="text-right pr-6">
                       <div className="flex justify-end gap-1">
                         {l.status === 'pending' && (
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary" onClick={() => handleEditLoan(l)}>
-                            <Edit className="h-3.5 w-3.5" />
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-primary transition-colors" onClick={() => handleEditLoan(l)}>
+                            <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-destructive" onClick={() => handleDeleteLoan(l.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-destructive transition-colors" onClick={() => handleDeleteLoan(l.id)}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 )) : (
-                  <TableRow key="no-loans-row">
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground italic text-xs">No loan records found in your portal.</TableCell>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-16 text-muted-foreground italic text-xs bg-slate-50/20">
+                      No loan applications detected in your history.
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -450,29 +486,49 @@ export default function MemberDashboard() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Loan Request</DialogTitle>
-            <DialogDescription>Modify your pending application details.</DialogDescription>
+            <DialogTitle className="text-xl font-headline font-bold">Modify Pending Application</DialogTitle>
+            <DialogDescription>Your request can only be edited while it is still in the 'Pending' status.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-loaner-name">Loaner Name</Label>
-              <Input id="edit-loaner-name" value={editLoanerName} onChange={(e) => setEditLoanerName(e.target.value)} />
+              <Label htmlFor="edit-loaner-name" className="text-xs uppercase font-bold text-muted-foreground">Actual Loaner / Beneficiary</Label>
+              <Input id="edit-loaner-name" value={editLoanerName} onChange={(e) => setEditLoanerName(e.target.value)} className="font-medium" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
-              <Input id="edit-amount" type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+              <Label htmlFor="edit-amount" className="text-xs uppercase font-bold text-muted-foreground">Requested Principal (₱)</Label>
+              <Input id="edit-amount" type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="font-bold text-primary" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-purpose">Purpose</Label>
-              <Input id="edit-purpose" value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)} />
+              <Label htmlFor="edit-purpose" className="text-xs uppercase font-bold text-muted-foreground">Loan Purpose / Details</Label>
+              <Input id="edit-purpose" value={editPurpose} onChange={(e) => setEditPurpose(e.target.value)} className="font-medium" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateLoan}>Save Changes</Button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="font-semibold">Cancel</Button>
+            <Button onClick={handleUpdateLoan} className="bg-primary text-white font-bold">Update Application</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function User(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
   );
 }
