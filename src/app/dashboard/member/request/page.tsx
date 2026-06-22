@@ -23,7 +23,8 @@ import {
   FunctionSquare, 
   Loader2, 
   User,
-  AlertCircle
+  AlertCircle,
+  Users
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,7 @@ export default function LoanRequestPage() {
   const [term, setTerm] = useState(1);
   const [purpose, setPurpose] = useState('');
   const [loanerName, setLoanerName] = useState('');
+  const [comakerId, setComakerId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Base monthly rate is 10%
@@ -57,23 +59,33 @@ export default function LoanRequestPage() {
 
   const { data: contributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
 
+  // Fetch all members for comaker selection
+  const membersQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('role', '==', 'member'));
+  }, [firestore]);
+
+  const { data: members, loading: membersLoading } = useCollection<any>(membersQuery);
+
+  // Filter out current user from comaker list
+  const availableComakers = useMemo(() => {
+    if (!members || !user) return [];
+    return members.filter(m => m.id !== user.uid);
+  }, [members, user]);
+
   // Dynamic Probability Logic
-  const { consistencyScore, probabilityResult, isAtLimit } = useMemo(() => {
-    // Consistency calculation for the progress bar
+  const { consistencyScore, probabilityResult } = useMemo(() => {
     const count = contributions?.length || 0;
     let score = 0;
     if (count >= 5) score = 0.95;
     else if (count >= 3) score = 0.85;
     else if (count > 0) score = 0.60;
     else score = 0;
-
-    const atLimit = amount >= 30000;
     
-    // Result logic based on 30k limit percentage
     const percentage = Math.round((amount / 30000) * 100);
     const result = `${percentage}%`;
     
-    return { consistencyScore: score, probabilityResult: result, isAtLimit: atLimit };
+    return { consistencyScore: score, probabilityResult: result };
   }, [contributions, amount]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -101,11 +113,11 @@ export default function LoanRequestPage() {
 
     setIsSubmitting(true);
 
-    // Calculate specific interest rate to store in database
     const storedInterestRate = term === 0.25 ? 0.05 : monthlyInterestRate;
 
     const loanData = {
       memberId: user.uid,
+      comakerId: comakerId || null,
       loanerName: loanerName,
       amount: amount,
       status: 'pending',
@@ -173,6 +185,27 @@ export default function LoanRequestPage() {
                 </div>
                 <p className="text-[10px] text-muted-foreground italic">
                   * If the member is requesting for themselves, enter your own name.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="comaker">Co-Maker / Guarantor (Optional)</Label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                  <Select value={comakerId} onValueChange={setComakerId}>
+                    <SelectTrigger id="comaker" className="pl-10 h-11">
+                      <SelectValue placeholder="Select a co-maker" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Co-Maker</SelectItem>
+                      {availableComakers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  * Selecting a co-maker with strong history can improve your approval probability.
                 </p>
               </div>
 

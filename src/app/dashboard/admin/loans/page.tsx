@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -20,7 +19,8 @@ import {
   User,
   MessageSquareQuote,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Users
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -43,7 +43,6 @@ export default function AdminLoanApprovals() {
     setMounted(true);
   }, []);
 
-  // Simplified query to avoid composite index requirement during prototype phase
   const loansQuery = useMemo(() => {
     if (!firestore) return null;
     return query(
@@ -52,7 +51,6 @@ export default function AdminLoanApprovals() {
     );
   }, [firestore]);
 
-  // Real-time members for lookup
   const membersQuery = useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
@@ -63,7 +61,6 @@ export default function AdminLoanApprovals() {
 
   const selectedLoan = useMemo(() => loans?.find(l => l.id === selectedLoanId), [loans, selectedLoanId]);
 
-  // Real-time Contributions for the selected member (for GenAI analysis)
   const contributionsQuery = useMemo(() => {
     if (!firestore || !selectedLoan?.memberId) return null;
     return query(
@@ -126,7 +123,6 @@ export default function AdminLoanApprovals() {
       });
   };
 
-  // Robust filtering and sorting in memory to ensure real-time synchronization
   const filteredLoans = useMemo(() => {
     if (!loans) return [];
     
@@ -146,7 +142,6 @@ export default function AdminLoanApprovals() {
                purpose.includes(searchLower);
       })
       .sort((a, b) => {
-        // Sort by requestDate descending
         const dateA = a.requestDate || '';
         const dateB = b.requestDate || '';
         return dateB.localeCompare(dateA);
@@ -154,6 +149,7 @@ export default function AdminLoanApprovals() {
   }, [loans, members, search]);
 
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
+  const selectedComaker = selectedLoan?.comakerId ? getMember(selectedLoan.comakerId) : null;
   const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown';
 
   if (!mounted) return null;
@@ -211,6 +207,7 @@ export default function AdminLoanApprovals() {
                 <TableBody>
                   {filteredLoans.map((loan) => {
                     const member = getMember(loan.memberId);
+                    const comaker = loan.comakerId ? getMember(loan.comakerId) : null;
                     const loanerName = loan.loanerName || member?.name || 'Unknown';
                     const isSelected = selectedLoanId === loan.id;
                     
@@ -231,9 +228,16 @@ export default function AdminLoanApprovals() {
                             </Avatar>
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-800">{loanerName}</span>
-                              <span className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
-                                <User className="h-2 w-2" /> Member: {member?.name || 'Loading...'}
-                              </span>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                <span className="text-[9px] text-muted-foreground uppercase flex items-center gap-1">
+                                  <User className="h-2 w-2" /> Member: {member?.name || 'Loading...'}
+                                </span>
+                                {comaker && (
+                                  <span className="text-[9px] text-primary/70 font-bold uppercase flex items-center gap-1">
+                                    <Users className="h-2 w-2" /> Co-Maker: {comaker.name}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
@@ -292,6 +296,16 @@ export default function AdminLoanApprovals() {
                     </div>
                   </div>
 
+                  {selectedComaker && (
+                    <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-primary/70 flex items-center gap-1">
+                        <Users className="h-3 w-3" /> Verified Co-Maker
+                      </p>
+                      <p className="text-sm font-bold text-slate-800">{selectedComaker.name}</p>
+                      <p className="text-[9px] text-muted-foreground italic">Shares: {selectedComaker.shares?.toLocaleString() || 0} • Savings: ₱{selectedComaker.totalContributions?.toLocaleString() || 0}</p>
+                    </div>
+                  )}
+
                   <div className="p-4 bg-slate-50 rounded-xl space-y-2">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Loan Purpose</p>
                     <p className="text-sm text-slate-700 italic">"{selectedLoan.purpose}"</p>
@@ -313,7 +327,6 @@ export default function AdminLoanApprovals() {
                 </CardContent>
               </Card>
 
-              {/* GenAI Risk Assessment uses live member contribution history */}
               <LoanRiskAssessment 
                 memberId={selectedLoan.memberId}
                 requestedAmount={selectedLoan.amount}
@@ -340,7 +353,7 @@ export default function AdminLoanApprovals() {
             <Card className="border-dashed flex items-center justify-center p-12 h-[400px] bg-muted/20">
               <div className="text-center space-y-4">
                 <BrainCircuit className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="text-xs text-muted-foreground max-w-[180px] mx-auto">Select a request from the list to see member financials and add release notes.</p>
+                <p className="text-xs text-muted-foreground max-w-[180px] mx-auto">Select a request from the list to see member financials, co-maker details, and perform AI assessment.</p>
               </div>
             </Card>
           )}
