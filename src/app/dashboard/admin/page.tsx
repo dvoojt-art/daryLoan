@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -16,14 +17,13 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  History,
   CheckCircle2,
-  MessageSquareText,
   Loader2,
   ChevronDown,
   FileText,
   FileBox,
-  Wallet
+  Wallet,
+  Coins
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
   const recentActivityQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'loans'), orderBy('requestDate', 'desc'), limit(5));
+    return query(collection(firestore, 'loans'), orderBy('requestDate', 'desc'), limit(10));
   }, [firestore]);
 
   const { data: allLoans, loading: loansLoading } = useCollection<any>(loansQuery);
@@ -280,19 +280,21 @@ export default function AdminDashboard() {
       {/* Stats Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {[
-          { label: 'Total Capital', value: `₱${stats.totalCapital.toLocaleString()}`, sub: 'Member contributions', icon: Wallet, color: 'text-primary' },
+          { label: 'Total Capital', value: `₱${stats.totalCapital.toLocaleString()}`, sub: 'Member savings', icon: Wallet, color: 'text-primary' },
           { label: 'Active Members', value: stats.activeMembersCount, sub: 'Verified lenders', icon: Users, color: 'text-primary' },
           { label: 'Capital Disbursed', value: `₱${stats.totalDisbursed.toLocaleString()}`, sub: 'Principal in circulation', icon: HandCoins, color: 'text-accent' },
           { label: 'Estimated Yield', value: `₱${stats.estimatedInterest.toLocaleString()}`, sub: 'Calculated 10% monthly', icon: TrendingUp, color: 'text-green-500' },
-          { label: 'Review Queue', value: stats.pendingCount, sub: 'Awaiting AI assessment', icon: Zap, color: 'text-accent', bg: 'bg-slate-800 text-white' },
+          { label: 'Review Queue', value: stats.pendingCount, sub: 'Awaiting assessment', icon: Zap, color: 'text-accent', bg: 'bg-slate-800 text-white' },
         ].map((s, idx) => (
-          <Card key={idx} className={cn("border-none shadow-sm transition-shadow", s.bg)}>
+          <Card key={idx} className={cn("border-none shadow-sm transition-all hover:shadow-md", s.bg)}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-[10px] font-bold uppercase tracking-widest opacity-70">{s.label}</CardTitle>
               <s.icon className={cn("h-4 w-4", s.color)} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{s.value}</div>
+              <div className="text-2xl font-bold">
+                {loansLoading || membersLoading ? <Loader2 className="h-6 w-6 animate-spin opacity-20" /> : s.value}
+              </div>
               <p className="text-[10px] opacity-70 font-medium mt-1">{s.sub}</p>
             </CardContent>
           </Card>
@@ -305,7 +307,12 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Link href="/dashboard/admin/loans" className="block group">
               <Card className="border-none shadow-sm group-hover:bg-primary transition-colors">
-                <CardHeader><CardTitle className="text-sm font-bold group-hover:text-white">Loan Approvals</CardTitle></CardHeader>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-sm font-bold group-hover:text-white">Loan Approvals</CardTitle>
+                    <Badge variant="outline" className="group-hover:border-white group-hover:text-white">{stats.pendingCount}</Badge>
+                  </div>
+                </CardHeader>
                 <CardContent className="flex justify-end"><ArrowRight className="h-4 w-4 group-hover:text-white" /></CardContent>
               </Card>
             </Link>
@@ -319,7 +326,10 @@ export default function AdminDashboard() {
         </div>
 
         <Card className="border-none shadow-sm bg-white">
-          <CardHeader><CardTitle className="text-lg font-bold">Recent Financial Activity</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-bold">Recent Member Activity</CardTitle>
+            <History className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
           <CardContent>
             {loansLoading ? (
               <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
@@ -328,23 +338,29 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-4">
                 {recentActivity?.map((loan: any) => (
-                  <div key={loan.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
+                  <div key={loan.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0 group transition-colors hover:bg-slate-50 p-2 rounded-lg">
                     <div className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
-                      loan.status === 'approved' ? "bg-green-50 text-green-600" : 
-                      loan.status === 'pending' ? "bg-yellow-50 text-yellow-600" : "bg-slate-50"
+                      "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border transition-all",
+                      loan.status === 'approved' ? "bg-green-50 text-green-600 border-green-100" : 
+                      loan.status === 'pending' ? "bg-yellow-50 text-yellow-600 border-yellow-100 animate-pulse" : 
+                      loan.status === 'overdue' ? "bg-red-50 text-red-600 border-red-100" : "bg-slate-50 border-slate-100"
                     )}>
-                      {loan.status === 'approved' ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                      {loan.status === 'approved' ? <CheckCircle2 className="h-4 w-4" /> : 
+                       loan.status === 'pending' ? <Clock className="h-4 w-4" /> : 
+                       loan.status === 'overdue' ? <AlertTriangle className="h-4 w-4" /> : <Coins className="h-4 w-4" />}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold">{loan.loanerName || 'Unknown'} - ₱{loan.amount.toLocaleString()}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase">{loan.purpose} • {formatDate(loan.requestDate)}</p>
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-slate-800">{loan.loanerName || 'Unknown'} - ₱{loan.amount.toLocaleString()}</p>
+                        <Badge variant="outline" className="text-[8px] h-4 uppercase">{loan.status}</Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-tight">{loan.purpose} • {formatDate(loan.requestDate)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <Button variant="ghost" size="sm" className="w-full mt-4 font-bold" asChild>
+            <Button variant="ghost" size="sm" className="w-full mt-4 font-bold text-primary" asChild>
               <Link href="/dashboard/admin/ledger">View Full Audit Trail <ArrowRight className="ml-2 h-3 w-3" /></Link>
             </Button>
           </CardContent>
