@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
@@ -44,11 +44,14 @@ import {
   Plus,
   MessageSquareText,
   AlertCircle,
-  Calendar as CalendarIcon
+  Loader2
 } from 'lucide-react';
-import { MOCK_MEMBERS, MOCK_LOANS } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, doc, updateDoc, deleteDoc, addDoc, orderBy } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
@@ -56,223 +59,140 @@ export default function AdminLedgerPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const firestore = useFirestore();
 
-  // Form State for new/edit record
-  const [newRecord, setNewRecord] = useState({
+  // Form State
+  const [formState, setFormState] = useState({
     memberId: '',
     loanerName: '',
     amount: '',
     purpose: '',
-    termMonths: '3',
+    termMonths: '1',
     adminNote: '',
   });
 
-  const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
-    return `${month}-${day}-${year}`;
+  // Real-time data
+  const loansQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'loans'), orderBy('requestDate', 'desc'));
+  }, [firestore]);
+
+  const membersQuery = useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
+
+  const { data: rawLoans, loading: loansLoading } = useCollection<any>(loansQuery);
+  const { data: members } = useCollection<any>(membersQuery);
+
+  const calculateInterest = (amount: number, term: number) => {
+    if (term === 0.25) return amount * 0.05;
+    return amount * (0.10 * term);
   };
 
-  // Helper to calculate total with penalties
-  const calculateTotalWithPenalties = (amount: number, termMonths: number, month1: string, month2: string, month3: string) => {
-    const interestPerMonth = amount * 0.10;
-    const baseTotal = amount + (interestPerMonth * termMonths);
-    
-    let lateCount = 0;
-    if (month1 === 'late') lateCount++;
-    if (month2 === 'late') lateCount++;
-    if (month3 === 'late') lateCount++;
-    
-    // Add 10% penalty from total payable for each late month
-    const penalty = baseTotal * (0.10 * lateCount);
-    return baseTotal + penalty;
+  const calculateTotal = (amount: number, term: number, m1: string, m2: string, m3: string) => {
+    const interest = calculateInterest(amount, term);
+    const baseTotal = amount + interest;
+    let penalties = 0;
+    if (m1 === 'late') penalties += baseTotal * 0.10;
+    if (m2 === 'late') penalties += baseTotal * 0.10;
+    if (m3 === 'late') penalties += baseTotal * 0.10;
+    return baseTotal + penalties;
   };
 
-  // Initial data setup
-  const initialLedgerData = useMemo(() => {
-    return MOCK_LOANS.map(loan => {
-      const member = MOCK_MEMBERS.find(m => m.id === loan.memberId);
-      const interest = loan.amount * 0.10; // 10% interest rule
+  const processedLedger = useMemo(() => {
+    if (!rawLoans) return [];
+    return rawLoans.map(loan => {
+      const member = members?.find(m => m.id === loan.memberId);
+      const m1 = loan.month1 || 'pending';
+      const m2 = loan.month2 || 'pending';
+      const m3 = loan.month3 || 'pending';
+      const term = loan.termMonths || 1;
+      const amount = loan.amount || 0;
       
-      const month1 = loan.status === 'approved' || loan.status === 'repaid' ? 'paid' : 'pending';
-      const month2 = loan.status === 'repaid' ? 'paid' : loan.status === 'overdue' ? 'late' : 'pending';
-      const month3 = loan.status === 'repaid' ? 'paid' : 'pending';
-      
-      const total = calculateTotalWithPenalties(loan.amount, loan.termMonths, month1, month2, month3);
-      
+      const interest = calculateInterest(amount, term);
+      const total = calculateTotal(amount, term, m1, m2, m3);
+
       return {
         ...loan,
         memberName: member?.name || 'Unknown',
-        memberEmail: member?.email || '',
         interest,
         total,
-        month1,
-        month2,
-        month3,
-        month1Date: '',
-        month2Date: '',
-        month3Date: '',
+        month1: m1,
+        month2: m2,
+        month3: m3,
       };
-    }).sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
-  }, []);
-
-  const [ledgerData, setLedgerData] = useState(initialLedgerData);
-
-  const handleStatusChange = (id: string, month: 'month1' | 'month2' | 'month3', newStatus: string) => {
-    setLedgerData(prev => prev.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [month]: newStatus };
-        const newTotal = calculateTotalWithPenalties(
-          updatedItem.amount, 
-          updatedItem.termMonths, 
-          updatedItem.month1, 
-          updatedItem.month2, 
-          updatedItem.month3
-        );
-        
-        if (newStatus === 'late') {
-          toast({
-            title: "Penalty Applied",
-            description: "A 10% late penalty has been added to the total payable.",
-          });
-        }
-        
-        return { ...updatedItem, total: newTotal };
-      }
-      return item;
-    }));
-  };
-
-  const handleDateChange = (id: string, monthKey: 'month1Date' | 'month2Date' | 'month3Date', newDate: string) => {
-    setLedgerData(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, [monthKey]: newDate };
-      }
-      return item;
-    }));
-  };
-
-  const handleEdit = (record: any) => {
-    setEditingRecord(record);
-    setNewRecord({
-      memberId: record.memberId,
-      loanerName: record.loanerName || '',
-      amount: record.amount.toString(),
-      purpose: record.purpose,
-      termMonths: record.termMonths.toString(),
-      adminNote: record.adminNote || '',
     });
-    setIsEditDialogOpen(true);
+  }, [rawLoans, members]);
+
+  const handleStatusChange = (loanId: string, monthKey: string, newStatus: string) => {
+    if (!firestore) return;
+    const loanRef = doc(firestore, 'loans', loanId);
+    updateDoc(loanRef, { [monthKey]: newStatus }).catch(async (e) => {
+      const error = new FirestorePermissionError({ path: loanRef.path, operation: 'update' });
+      errorEmitter.emit('permission-error', error);
+    });
+    
+    if (newStatus === 'late') {
+      toast({ title: "Penalty Applied", description: "A 10% late penalty has been added to the total." });
+    }
+  };
+
+  const handleDateUpdate = (loanId: string, monthDateKey: string, newDate: string) => {
+    if (!firestore) return;
+    const loanRef = doc(firestore, 'loans', loanId);
+    updateDoc(loanRef, { [monthDateKey]: newDate });
   };
 
   const handleDelete = (id: string) => {
-    setLedgerData(prev => prev.filter(item => item.id !== id));
-    toast({
-      title: "Record Removed",
-      description: "Financial entry has been deleted from the master ledger.",
-      variant: "destructive",
+    if (!firestore) return;
+    const loanRef = doc(firestore, 'loans', id);
+    deleteDoc(loanRef).then(() => {
+      toast({ title: "Record Deleted", variant: "destructive" });
     });
   };
 
-  const handleSaveEdit = () => {
-    if (!newRecord.amount || !newRecord.purpose || !newRecord.loanerName) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const amountNum = parseFloat(newRecord.amount);
-    const termNum = parseInt(newRecord.termMonths);
-    const interest = amountNum * 0.10;
-
-    setLedgerData(prev => prev.map(item => {
-      if (item.id === editingRecord.id) {
-        const total = calculateTotalWithPenalties(amountNum, termNum, item.month1, item.month2, item.month3);
-        return {
-          ...item,
-          loanerName: newRecord.loanerName,
-          amount: amountNum,
-          purpose: newRecord.purpose,
-          termMonths: termNum,
-          interest,
-          total,
-          adminNote: newRecord.adminNote,
-        };
-      }
-      return item;
-    }));
-
-    setIsEditDialogOpen(false);
-    toast({
-      title: "Record Updated",
-      description: `Successfully modified ledger entry for ${editingRecord.memberName}.`,
-    });
-  };
-
-  const handleAddRecord = () => {
-    if (!newRecord.memberId || !newRecord.amount || !newRecord.purpose || !newRecord.loanerName) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const member = MOCK_MEMBERS.find(m => m.id === newRecord.memberId);
-    const amountNum = parseFloat(newRecord.amount);
-    const termNum = parseInt(newRecord.termMonths);
-    const interest = amountNum * 0.10;
-    const total = calculateTotalWithPenalties(amountNum, termNum, 'pending', 'pending', 'pending');
-
-    const newEntry = {
-      id: `l-new-${Date.now()}`,
-      memberId: newRecord.memberId,
-      loanerName: newRecord.loanerName,
+  const handleSaveRecord = () => {
+    if (!firestore || !formState.memberId || !formState.amount) return;
+    
+    const amountNum = parseFloat(formState.amount);
+    const termNum = parseFloat(formState.termMonths);
+    const data = {
+      memberId: formState.memberId,
+      loanerName: formState.loanerName,
       amount: amountNum,
-      status: 'approved' as const,
-      requestDate: new Date().toISOString().split('T')[0],
-      interestRate: 0.10,
+      purpose: formState.purpose,
       termMonths: termNum,
-      purpose: newRecord.purpose,
-      memberName: member?.name || 'Unknown',
-      memberEmail: member?.email || '',
-      interest,
-      total,
+      adminNote: formState.adminNote,
+      requestDate: new Date().toISOString().split('T')[0],
+      status: 'approved',
       month1: 'pending',
       month2: 'pending',
       month3: 'pending',
-      month1Date: '',
-      month2Date: '',
-      month3Date: '',
-      adminNote: newRecord.adminNote,
     };
 
-    setLedgerData(prev => [newEntry, ...prev]);
-    setIsAddDialogOpen(false);
-    setNewRecord({ memberId: '', loanerName: '', amount: '', purpose: '', termMonths: '3', adminNote: '' });
-    
-    toast({
-      title: "Record Added",
-      description: `Successfully added financial record for ${member?.name}.`,
-    });
+    if (editingId) {
+      updateDoc(doc(firestore, 'loans', editingId), data).then(() => {
+        setIsEditDialogOpen(false);
+        setEditingId(null);
+        toast({ title: "Ledger Entry Updated" });
+      });
+    } else {
+      addDoc(collection(firestore, 'loans'), data).then(() => {
+        setIsAddDialogOpen(false);
+        setFormState({ memberId: '', loanerName: '', amount: '', purpose: '', termMonths: '1', adminNote: '' });
+        toast({ title: "New Ledger Entry Added" });
+      });
+    }
   };
 
-  const filteredLedger = ledgerData.filter(tx => 
+  const filteredLedger = processedLedger.filter(tx => 
     tx.memberName.toLowerCase().includes(search.toLowerCase()) ||
     (tx.loanerName && tx.loanerName.toLowerCase().includes(search.toLowerCase())) ||
     tx.purpose.toLowerCase().includes(search.toLowerCase())
@@ -286,41 +206,22 @@ export default function AdminLedgerPage() {
     }), { amount: 0, interest: 0, total: 0 });
   }, [filteredLedger]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid': return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] font-bold">PAID</Badge>;
-      case 'late': return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] font-bold">LATE</Badge>;
-      default: return <Badge variant="outline" className="bg-slate-50 text-slate-400 border-slate-200 text-[10px] font-bold">PENDING</Badge>;
-    }
-  };
-
-  const StatusDropdown = ({ id, month, currentStatus }: { id: string, month: 'month1' | 'month2' | 'month3', currentStatus: string }) => (
+  const StatusDropdown = ({ id, monthKey, currentStatus }: { id: string, monthKey: string, currentStatus: string }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="focus:outline-none group flex items-center justify-center gap-1 mx-auto hover:opacity-80 transition-opacity">
-          {getStatusBadge(currentStatus)}
-          <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
+        <button className="focus:outline-none group flex items-center justify-center gap-1 mx-auto hover:opacity-80">
+          <Badge variant="outline" className={cn(
+            "text-[10px] font-bold uppercase",
+            currentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" :
+            currentStatus === 'late' ? "bg-red-50 text-red-700 border-red-200" : "bg-slate-50 text-slate-400"
+          )}>{currentStatus}</Badge>
+          <ChevronDown className="h-3 w-3 text-slate-400" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="center" className="min-w-[100px]">
-        <DropdownMenuItem onClick={() => handleStatusChange(id, month, 'paid')}>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-xs font-bold">PAID</span>
-          </div>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleStatusChange(id, month, 'late')}>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-red-500" />
-            <span className="text-xs font-bold">LATE</span>
-          </div>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleStatusChange(id, month, 'pending')}>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-slate-300" />
-            <span className="text-xs font-bold">PENDING</span>
-          </div>
-        </DropdownMenuItem>
+      <DropdownMenuContent align="center">
+        {['paid', 'late', 'pending'].map(s => (
+          <DropdownMenuItem key={s} onClick={() => handleStatusChange(id, monthKey, s)} className="capitalize text-xs font-bold">{s}</DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -331,359 +232,126 @@ export default function AdminLedgerPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold text-slate-800 tracking-tight">Master Financial Insight Hub</h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Manage and audit centralized community capital flows</p>
+          <h1 className="text-3xl font-headline font-bold text-slate-800">Master Financial Ledger</h1>
+          <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Real-time oversight of community capital flows</p>
         </div>
-        
         <div className="flex gap-2">
-          <Button variant="outline" className="h-10">
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
-          
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary h-10">
-                <Plus className="mr-2 h-4 w-4" /> Add Record
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Add Financial Record</DialogTitle>
-                <DialogDescription>
-                  Manually enter a new loan record into the master ledger.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="member">Select Member</Label>
-                  <Select onValueChange={(val) => setNewRecord({ ...newRecord, memberId: val })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOCK_MEMBERS.filter(m => m.role === 'member').map(member => (
-                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="loaner">Loaner Name</Label>
-                  <Input 
-                    id="loaner" 
-                    placeholder="e.g. Maria Clara"
-                    value={newRecord.loanerName}
-                    onChange={(e) => setNewRecord({ ...newRecord, loanerName: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="amount">Principal Amount (₱)</Label>
-                  <Input 
-                    id="amount" 
-                    type="number" 
-                    placeholder="5000"
-                    value={newRecord.amount}
-                    onChange={(e) => setNewRecord({ ...newRecord, amount: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="purpose">Purpose</Label>
-                  <Input 
-                    id="purpose" 
-                    placeholder="e.g. Business expansion"
-                    value={newRecord.purpose}
-                    onChange={(e) => setNewRecord({ ...newRecord, purpose: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="term">Term (Months)</Label>
-                  <Select 
-                    defaultValue="3"
-                    onValueChange={(val) => setNewRecord({ ...newRecord, termMonths: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="3 Months" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 Month</SelectItem>
-                      <SelectItem value="2">2 Months</SelectItem>
-                      <SelectItem value="3">3 Months</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="note">Admin Release Note</Label>
-                  <Textarea 
-                    id="note" 
-                    placeholder="Optional release instructions..."
-                    value={newRecord.adminNote}
-                    onChange={(e) => setNewRecord({ ...newRecord, adminNote: e.target.value })}
-                    className="text-xs resize-none"
-                    rows={2}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleAddRecord}>Save Record</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" className="h-10"><Download className="mr-2 h-4 w-4" /> Export</Button>
+          <Button className="bg-primary h-10" onClick={() => setIsAddDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Record</Button>
         </div>
       </div>
 
       <Card className="border-none shadow-sm bg-white overflow-hidden">
         <CardHeader className="pb-3 border-b">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by member name or reference..."
-                className="pl-10 h-10 border-slate-200"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
-              <Filter className="h-4 w-4" /> Advanced Filter
-            </Button>
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Filter by name or purpose..." className="pl-10 h-10" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider py-4">Member Account</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Date Released</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Principal</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">10% Int.</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Total Payable</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-center">1st Month</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-center">2nd Month</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-center">3rd Month</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLedger.map((tx) => {
-                // Check if any month is late to show a penalty warning
-                const baseInterest = tx.amount * 0.10;
-                const baseTotal = tx.amount + (baseInterest * tx.termMonths);
-                const hasPenalty = tx.total > baseTotal;
-
-                return (
-                  <TableRow key={tx.id} className="hover:bg-slate-50 transition-colors border-b">
-                    <TableCell className="py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 border border-slate-200">
-                          <AvatarImage src={`https://picsum.photos/seed/${tx.memberId}/100/100`} />
-                          <AvatarFallback>{tx.memberName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
-                            {tx.adminNote && (
-                              <Badge variant="ghost" className="h-3.5 px-1 bg-slate-100 text-[8px] text-slate-500 font-bold border-none">
-                                <MessageSquareText className="h-2 w-2 mr-1" /> NOTE
-                              </Badge>
-                            )}
-                          </div>
-                          {tx.loanerName && (
-                            <span className="text-xs text-primary italic font-medium">Loaner: {tx.loanerName}</span>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-medium text-slate-600">
-                      {formatDate(tx.requestDate)}
-                    </TableCell>
-                    <TableCell className="font-bold text-slate-800">
-                      ₱{tx.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-primary font-semibold text-xs">
-                      ₱{tx.interest.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="relative">
+          {loansLoading ? (
+            <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50">
+                  <TableHead className="font-bold text-[10px] uppercase py-4 pl-6">Member / Account</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase">Principal</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase">Interest</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase">Total Payable</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-center">Month 1</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-center">Month 2</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-center">Month 3</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-right pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLedger.map((tx) => (
+                  <TableRow key={tx.id} className="hover:bg-slate-50 transition-colors">
+                    <TableCell className="pl-6 py-4">
                       <div className="flex flex-col">
-                        <span className={cn("font-bold", hasPenalty ? "text-destructive" : "text-primary")}>
-                          ₱{tx.total.toLocaleString()}
-                        </span>
-                        {hasPenalty && (
-                          <span className="text-[9px] font-bold text-destructive uppercase flex items-center gap-1">
-                            <AlertCircle className="h-2 w-2" /> Late Penalties Applied
-                          </span>
-                        )}
+                        <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                        {tx.loanerName && <span className="text-[10px] text-primary italic font-medium">L: {tx.loanerName}</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-bold">₱{tx.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-primary font-bold">₱{tx.interest.toLocaleString()}</TableCell>
+                    <TableCell className="font-bold text-slate-900">₱{tx.total.toLocaleString()}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <StatusDropdown id={tx.id} monthKey="month1" currentStatus={tx.month1} />
+                        <Input className="h-6 w-20 text-[9px] text-center border-none bg-slate-50" value={tx.month1Date || ''} placeholder="Date" onChange={(e) => handleDateUpdate(tx.id, 'month1Date', e.target.value)} />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <StatusDropdown id={tx.id} month="month1" currentStatus={tx.month1} />
-                        <Input 
-                          type="text"
-                          placeholder="Set Date"
-                          className="h-6 w-20 text-[9px] text-center border-none bg-slate-50 hover:bg-slate-100 focus:bg-white px-1 shadow-none"
-                          value={tx.month1Date}
-                          onChange={(e) => handleDateChange(tx.id, 'month1Date', e.target.value)}
-                        />
+                      <div className="flex flex-col items-center gap-1">
+                        <StatusDropdown id={tx.id} monthKey="month2" currentStatus={tx.month2} />
+                        <Input className="h-6 w-20 text-[9px] text-center border-none bg-slate-50" value={tx.month2Date || ''} placeholder="Date" onChange={(e) => handleDateUpdate(tx.id, 'month2Date', e.target.value)} />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <StatusDropdown id={tx.id} month="month2" currentStatus={tx.month2} />
-                        <Input 
-                          type="text"
-                          placeholder="Set Date"
-                          className="h-6 w-20 text-[9px] text-center border-none bg-slate-50 hover:bg-slate-100 focus:bg-white px-1 shadow-none"
-                          value={tx.month2Date}
-                          onChange={(e) => handleDateChange(tx.id, 'month2Date', e.target.value)}
-                        />
+                      <div className="flex flex-col items-center gap-1">
+                        <StatusDropdown id={tx.id} monthKey="month3" currentStatus={tx.month3} />
+                        <Input className="h-6 w-20 text-[9px] text-center border-none bg-slate-50" value={tx.month3Date || ''} placeholder="Date" onChange={(e) => handleDateUpdate(tx.id, 'month3Date', e.target.value)} />
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <StatusDropdown id={tx.id} month="month3" currentStatus={tx.month3} />
-                        <Input 
-                          type="text"
-                          placeholder="Set Date"
-                          className="h-6 w-20 text-[9px] text-center border-none bg-slate-50 hover:bg-slate-100 focus:bg-white px-1 shadow-none"
-                          value={tx.month3Date}
-                          onChange={(e) => handleDateChange(tx.id, 'month3Date', e.target.value)}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-6">
                       <div className="flex justify-end gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-primary"
-                          onClick={() => handleEdit(tx)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-destructive"
-                          onClick={() => handleDelete(tx.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setEditingId(tx.id); setFormState({ ...tx, amount: tx.amount.toString(), termMonths: tx.termMonths.toString() }); setIsEditDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(tx.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-            <TableFooter className="bg-slate-50/50 font-bold border-t-2">
-              <TableRow>
-                <TableCell colSpan={2} className="pl-4 py-4 text-slate-800 uppercase text-[11px] tracking-wider">Overall Totals</TableCell>
-                <TableCell className="text-slate-800 font-bold">₱{totals.amount.toLocaleString()}</TableCell>
-                <TableCell className="text-primary font-bold">₱{totals.interest.toLocaleString()}</TableCell>
-                <TableCell className="text-primary font-bold">₱{totals.total.toLocaleString()}</TableCell>
-                <TableCell colSpan={4}></TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
-          {filteredLedger.length === 0 && (
-            <div className="text-center py-20 bg-slate-50/50">
-              <p className="text-slate-500 font-medium italic">No financial records matching your search.</p>
-            </div>
+                ))}
+              </TableBody>
+              <TableFooter className="bg-slate-50/50 font-bold border-t-2">
+                <TableRow>
+                  <TableCell colSpan={1} className="pl-6 py-4">OVERALL TOTALS</TableCell>
+                  <TableCell>₱{totals.amount.toLocaleString()}</TableCell>
+                  <TableCell className="text-primary">₱{totals.interest.toLocaleString()}</TableCell>
+                  <TableCell className="text-slate-900">₱{totals.total.toLocaleString()}</TableCell>
+                  <TableCell colSpan={4} />
+                </TableRow>
+              </TableFooter>
+            </Table>
           )}
         </CardContent>
       </Card>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-4 bg-primary rounded-xl text-white flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-white/70">Total Collected</p>
-            <p className="text-2xl font-bold">₱450,000</p>
-          </div>
-          <CheckCircle2 className="h-8 w-8 text-white/30" />
-        </div>
-        <div className="p-4 bg-accent rounded-xl text-white flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-white/70">Interest Gained</p>
-            <p className="text-2xl font-bold">₱45,000</p>
-          </div>
-          <TrendingUp className="h-8 w-8 text-white/30" />
-        </div>
-        <div className="p-4 bg-slate-800 rounded-xl text-white flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-white/70">Total Outstanding</p>
-            <p className="text-2xl font-bold">₱120,500</p>
-          </div>
-          <Clock className="h-8 w-8 text-white/30" />
-        </div>
-      </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Shared Add/Edit Dialog */}
+      <Dialog open={isAddDialogOpen || isEditDialogOpen} onOpenChange={(v) => { if (!v) { setIsAddDialogOpen(false); setIsEditDialogOpen(false); setEditingId(null); } }}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Ledger Entry</DialogTitle>
-            <DialogDescription>
-              Modify details for {editingRecord?.memberName}'s financial record.
-            </DialogDescription>
+            <DialogTitle>{editingId ? 'Edit Ledger Entry' : 'Add Ledger Entry'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-loaner">Loaner Name</Label>
-              <Input 
-                id="edit-loaner" 
-                value={newRecord.loanerName}
-                onChange={(e) => setNewRecord({ ...newRecord, loanerName: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-amount">Principal Amount (₱)</Label>
-              <Input 
-                id="edit-amount" 
-                type="number" 
-                value={newRecord.amount}
-                onChange={(e) => setNewRecord({ ...newRecord, amount: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-purpose">Purpose</Label>
-              <Input 
-                id="edit-purpose" 
-                value={newRecord.purpose}
-                onChange={(e) => setNewRecord({ ...newRecord, purpose: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-term">Term (Months)</Label>
-              <Select 
-                value={newRecord.termMonths}
-                onValueChange={(val) => setNewRecord({ ...newRecord, termMonths: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+            <div className="space-y-2">
+              <Label>Select Member</Label>
+              <Select value={formState.memberId} onValueChange={(v) => setFormState({ ...formState, memberId: v })}>
+                <SelectTrigger><SelectValue placeholder="Choose a member" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 Month</SelectItem>
-                  <SelectItem value="2">2 Months</SelectItem>
-                  <SelectItem value="3">3 Months</SelectItem>
+                  {members?.filter(m => m.role === 'member').map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-note">Admin Release Note</Label>
-              <Textarea 
-                id="edit-note" 
-                placeholder="Release instructions..."
-                value={newRecord.adminNote}
-                onChange={(e) => setNewRecord({ ...newRecord, adminNote: e.target.value })}
-                className="text-xs resize-none"
-                rows={2}
-              />
-            </div>
+            <Input placeholder="Loaner Name" value={formState.loanerName} onChange={(e) => setFormState({ ...formState, loanerName: e.target.value })} />
+            <Input placeholder="Amount (₱)" type="number" value={formState.amount} onChange={(e) => setFormState({ ...formState, amount: e.target.value })} />
+            <Input placeholder="Purpose" value={formState.purpose} onChange={(e) => setFormState({ ...formState, purpose: e.target.value })} />
+            <Select value={formState.termMonths} onValueChange={(v) => setFormState({ ...formState, termMonths: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0.25">7 Days</SelectItem>
+                <SelectItem value="1">1 Month</SelectItem>
+                <SelectItem value="2">2 Months</SelectItem>
+                <SelectItem value="3">3 Months</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveEdit}>Save Changes</Button>
+            <Button onClick={handleSaveRecord}>Save Entry</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

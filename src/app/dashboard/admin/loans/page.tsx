@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -17,35 +17,48 @@ import {
   BrainCircuit,
   Calendar,
   User,
-  MessageSquareQuote
+  MessageSquareQuote,
+  Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { MOCK_LOANS, MOCK_MEMBERS, Loan } from '@/lib/mock-data';
-import { LoanRiskAssessment } from '@/components/LoanRiskAssessment';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, where, doc, updateDoc, orderBy } from 'firebase/firestore';
+import { LoanRiskAssessment } from '@/components/LoanRiskAssessment';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AdminLoanApprovals() {
-  const [loans, setLoans] = useState<Loan[]>([]);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [adminNote, setAdminNote] = useState('');
   const [mounted, setMounted] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   useEffect(() => {
     setMounted(true);
-    const localLoans = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    
-    // Deduplicate logic: prefer localLoans over MOCK_LOANS
-    const localIds = new Set(localLoans.map((l: Loan) => l.id));
-    const uniqueMockLoans = MOCK_LOANS.filter(l => !localIds.has(l.id));
-    
-    const combinedLoans = [...localLoans, ...uniqueMockLoans];
-    const pendingLoans = combinedLoans.filter((l: Loan) => l.status === 'pending');
-    
-    setLoans(pendingLoans);
   }, []);
+
+  // Real-time pending loans
+  const loansQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'loans'),
+      where('status', '==', 'pending'),
+      orderBy('requestDate', 'desc')
+    );
+  }, [firestore]);
+
+  // Real-time members for lookup
+  const membersQuery = useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
+
+  const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
+  const { data: members } = useCollection<any>(membersQuery);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -58,59 +71,54 @@ export default function AdminLoanApprovals() {
     return `${month}-${day}-${year}`;
   };
 
-  const getMember = (id: string) => MOCK_MEMBERS.find(m => m.id === id);
+  const getMember = (id: string) => members?.find(m => m.id === id);
 
   const handleAction = (id: string, action: 'approved' | 'rejected') => {
-    const loan = loans.find(l => l.id === id);
+    if (!firestore) return;
+    
+    const loan = loans?.find(l => l.id === id);
     const member = getMember(loan?.memberId || '');
     const loanerName = loan?.loanerName || member?.name || 'Unknown';
     
-    // Update local UI state
-    setLoans(prev => prev.filter(l => l.id !== id));
-    if (selectedLoanId === id) setSelectedLoanId(null);
+    const loanRef = doc(firestore, 'loans', id);
+    const dueDate = action === 'approved' 
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+      : null;
 
-    // Update persistence
-    const localLoans: Loan[] = JSON.parse(localStorage.getItem('daryloan_user_loans') || '[]');
-    const isMock = !localLoans.some(l => l.id === id);
+    const updateData = { 
+      status: action, 
+      dueDate: dueDate, 
+      adminNote: adminNote 
+    };
 
-    if (!isMock) {
-      const updatedLocal = localLoans.map((l: Loan) => {
-        if (l.id === id) {
-          const dueDate = action === 'approved' 
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
-            : undefined;
-          return { ...l, status: action, dueDate, adminNote };
-        }
-        return l;
+    updateDoc(loanRef, updateData)
+      .then(() => {
+        toast({
+          title: `Loan ${action === 'approved' ? 'Approved' : 'Rejected'}`,
+          description: `${loanerName}'s request for ₱${loan?.amount.toLocaleString()} has been processed.`,
+          variant: action === 'rejected' ? 'destructive' : 'default',
+        });
+        setAdminNote('');
+        if (selectedLoanId === id) setSelectedLoanId(null);
+      })
+      .catch(async (e) => {
+        const error = new FirestorePermissionError({
+          path: loanRef.path,
+          operation: 'update',
+          requestResourceData: updateData
+        });
+        errorEmitter.emit('permission-error', error);
       });
-      localStorage.setItem('daryloan_user_loans', JSON.stringify(updatedLocal));
-    } else {
-      // For mock loans, we just simulate the persistence for this session
-      const mockUpdate: Loan = { 
-        ...loan!, 
-        status: action, 
-        adminNote,
-        dueDate: action === 'approved' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined
-      };
-      localStorage.setItem('daryloan_user_loans', JSON.stringify([mockUpdate, ...localLoans]));
-    }
-
-    toast({
-      title: `Loan ${action === 'approved' ? 'Approved' : 'Rejected'}`,
-      description: `${loanerName}'s request for ₱${loan?.amount.toLocaleString()} has been processed with your note.`,
-      variant: action === 'rejected' ? 'destructive' : 'default',
-    });
-    setAdminNote('');
   };
 
-  const filteredLoans = loans.filter(l => {
+  const filteredLoans = (loans || []).filter(l => {
     const member = getMember(l.memberId);
-    return (member?.name.toLowerCase().includes(search.toLowerCase()) || 
+    return (member?.name?.toLowerCase().includes(search.toLowerCase()) || 
            (l.loanerName && l.loanerName.toLowerCase().includes(search.toLowerCase())) ||
            l.purpose.toLowerCase().includes(search.toLowerCase()));
   });
 
-  const selectedLoan = loans.find(l => l.id === selectedLoanId);
+  const selectedLoan = loans?.find(l => l.id === selectedLoanId);
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
   const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown';
 
@@ -127,7 +135,7 @@ export default function AdminLoanApprovals() {
           <Clock className="h-5 w-5 text-primary" />
           <div>
             <p className="text-[10px] uppercase font-bold text-muted-foreground">Pending Requests</p>
-            <p className="text-lg font-bold text-primary">{loans.length}</p>
+            <p className="text-lg font-bold text-primary">{loans?.length || 0}</p>
           </div>
         </div>
       </div>
@@ -151,64 +159,71 @@ export default function AdminLoanApprovals() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold">Loaner / Member Account</TableHead>
-                  <TableHead className="font-bold">Principal</TableHead>
-                  <TableHead className="font-bold hidden md:table-cell">Request Date</TableHead>
-                  <TableHead className="text-right font-bold">Quick Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLoans.map((loan) => {
-                  const member = getMember(loan.memberId);
-                  const loanerName = loan.loanerName || member?.name || 'Unknown';
-                  const isSelected = selectedLoanId === loan.id;
-                  
-                  return (
-                    <TableRow 
-                      key={loan.id} 
-                      className={cn(
-                        "group transition-colors cursor-pointer",
-                        isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-slate-50"
-                      )}
-                      onClick={() => setSelectedLoanId(loan.id)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border border-slate-200">
-                            <AvatarImage src={`https://picsum.photos/seed/${loan.memberId}/100/100`} />
-                            <AvatarFallback>{loanerName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800">{loanerName}</span>
-                            <span className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
-                              <User className="h-2 w-2" /> Member: {member?.name}
-                            </span>
+            {loansLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                <p>Syncing approval queue...</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50">
+                    <TableHead className="font-bold">Loaner / Member Account</TableHead>
+                    <TableHead className="font-bold">Principal</TableHead>
+                    <TableHead className="font-bold hidden md:table-cell">Request Date</TableHead>
+                    <TableHead className="text-right font-bold">Quick Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLoans.map((loan) => {
+                    const member = getMember(loan.memberId);
+                    const loanerName = loan.loanerName || member?.name || 'Unknown';
+                    const isSelected = selectedLoanId === loan.id;
+                    
+                    return (
+                      <TableRow 
+                        key={loan.id} 
+                        className={cn(
+                          "group transition-colors cursor-pointer",
+                          isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-slate-50"
+                        )}
+                        onClick={() => setSelectedLoanId(loan.id)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border border-slate-200">
+                              <AvatarImage src={`https://picsum.photos/seed/${loan.memberId}/100/100`} />
+                              <AvatarFallback>{loanerName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-800">{loanerName}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                                <User className="h-2 w-2" /> Member: {member?.name}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold text-slate-700">₱{loan.amount.toLocaleString()}</span>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(loan.requestDate)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="text-xs font-bold text-primary">
-                          Review Request
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            {filteredLoans.length === 0 && (
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-slate-700">₱{loan.amount.toLocaleString()}</span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(loan.requestDate)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="text-xs font-bold text-primary">
+                            Review Request
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+            {!loansLoading && filteredLoans.length === 0 && (
               <div className="text-center py-20 bg-slate-50/50">
                 <Check className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                 <p className="text-slate-500 font-medium">All caught up! No pending requests.</p>
@@ -237,7 +252,9 @@ export default function AdminLoanApprovals() {
                     </div>
                     <div className="space-y-1 text-right">
                       <p className="text-[10px] uppercase font-bold text-muted-foreground">Term</p>
-                      <p className="text-xl font-bold text-slate-800">{selectedLoan.termMonths} Mo</p>
+                      <p className="text-xl font-bold text-slate-800">
+                        {selectedLoan.termMonths === 0.25 ? '7 Days' : `${selectedLoan.termMonths} Mo`}
+                      </p>
                     </div>
                   </div>
 
@@ -258,7 +275,6 @@ export default function AdminLoanApprovals() {
                       value={adminNote}
                       onChange={(e) => setAdminNote(e.target.value)}
                     />
-                    <p className="text-[9px] text-muted-foreground italic">* This note will be visible to the member upon decision.</p>
                   </div>
                 </CardContent>
               </Card>
@@ -266,11 +282,7 @@ export default function AdminLoanApprovals() {
               <LoanRiskAssessment 
                 memberId={selectedLoan.memberId}
                 requestedAmount={selectedLoan.amount}
-                contributionHistory={[
-                  { date: '2023-12-01', amount: 1000 },
-                  { date: '2024-01-01', amount: 1000 },
-                  { date: '2024-02-01', amount: 1000 },
-                ]}
+                contributionHistory={[]} // This should ideally be fetched from Firestore
               />
 
               <div className="flex gap-3">
