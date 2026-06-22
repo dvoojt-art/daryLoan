@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Clock,
   UserCheck,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -43,13 +44,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const firestore = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
-  const isAdmin = pathname.includes('/admin');
+  
+  // Robust role detection based on path
+  const isAdmin = pathname.startsWith('/dashboard/admin');
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Real-time Data Fetching for Notifications
+  // Admin gets all loans and users, members get only their own loans
   const loansQuery = useMemo(() => {
     if (!firestore || !user) return null;
     if (isAdmin) return collection(firestore, 'loans');
@@ -90,7 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ...pendingLoans.map(l => ({ 
         id: `pl-${l.id}`, 
         title: 'Approval Required', 
-        description: `Request for ₱${l.amount.toLocaleString()} from ${l.loanerName || users.find(u => u.id === l.memberId)?.email || 'Member'}`, 
+        description: `Request for ₱${l.amount.toLocaleString()} from ${l.loanerName || users.find(u => u.id === l.memberId)?.name || 'Member'}`, 
         icon: HandCoins, 
         href: '/dashboard/admin/loans',
         category: 'approval'
@@ -99,14 +103,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         id: `ol-${l.id}`, 
         title: 'Payment Overdue', 
         description: `₱${l.amount.toLocaleString()} loan from ${l.loanerName || 'Member'} is past due`, 
-        icon: AlertCircle, 
+        icon: AlertTriangle, 
         href: '/dashboard/admin/ledger',
         category: 'due'
       })),
       ...pendingMembers.map(m => ({ 
         id: `pm-${m.id}`, 
         title: 'New Member Application', 
-        description: `${m.email} is awaiting verification`, 
+        description: `${m.name || m.email} is awaiting verification`, 
         icon: UserCheck, 
         href: '/dashboard/admin/members',
         category: 'approval'
@@ -117,6 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const memberNotifications = useMemo(() => {
     const myOverdue = loans.filter(l => l.status === 'overdue');
     const myApproved = loans.filter(l => l.status === 'approved');
+    const myRejected = loans.filter(l => l.status === 'rejected');
 
     return [
       ...myOverdue.map(l => ({ 
@@ -129,11 +134,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       })),
       ...myApproved.map(l => ({ 
         id: `map-${l.id}`, 
-        title: 'Loan Agreement Ready', 
-        description: `Your ₱${l.amount.toLocaleString()} loan has been approved. Check your portal.`, 
+        title: 'Loan Approved!', 
+        description: `Your ₱${l.amount.toLocaleString()} loan for ${l.loanerName || 'yourself'} is ready.`, 
         icon: Clock, 
         href: '/dashboard/member',
         category: 'approval'
+      })),
+      ...myRejected.map(l => ({ 
+        id: `mrj-${l.id}`, 
+        title: 'Loan Request Rejected', 
+        description: `Your request for "${l.purpose}" was not approved. Click to see notes.`, 
+        icon: X, 
+        href: '/dashboard/member',
+        category: 'status'
       })),
     ];
   }, [loans]);
@@ -261,11 +274,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent className="w-80 p-0 shadow-2xl border-white/10" align="end">
                   <div className="p-4 border-b bg-slate-50/50">
-                    <h3 className="font-bold text-sm">Notifications</h3>
+                    <h3 className="font-bold text-sm">Real-time Notifications</h3>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
-                      {notificationCount} {notificationCount === 1 ? 'Alert' : 'Alerts'} Requiring Action
+                      {notificationCount} {notificationCount === 1 ? 'Update' : 'Updates'} Requiring Attention
                     </p>
                   </div>
                   <ScrollArea className="h-[350px]">
@@ -314,7 +327,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div className="bg-slate-100 p-3 rounded-full mb-3">
                           <Bell className="h-6 w-6 text-slate-400" />
                         </div>
-                        <p className="text-sm font-medium text-slate-500">No new notifications</p>
+                        <p className="text-sm font-medium text-slate-500">No new alerts</p>
+                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tight">Everything is up to date</p>
                       </div>
                     )}
                   </ScrollArea>
@@ -335,7 +349,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         asChild
                       >
                         <Link href={isAdmin ? "/dashboard/admin/ledger" : "/dashboard/member"}>
-                          View All
+                          View Full History
                         </Link>
                       </Button>
                     </div>
@@ -346,7 +360,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             
             <div className="h-8 w-px bg-white/10 mx-2" />
             <div className="hidden sm:block text-right">
-              <p className="text-xs font-semibold text-accent uppercase tracking-wider">{isAdmin ? 'Admin Session' : 'Member Session'}</p>
+              <p className="text-xs font-semibold text-accent uppercase tracking-wider">{isAdmin ? 'Admin Account' : 'Member Account'}</p>
             </div>
           </div>
         </header>
