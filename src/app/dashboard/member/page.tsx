@@ -359,7 +359,7 @@ export default function MemberDashboard() {
                       </TableCell>
                     </TableRow>
                   )) : (
-                    <TableRow>
+                    <TableRow key="no-loans-row">
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic text-xs">No loan records found.</TableCell>
                     </TableRow>
                   )}
@@ -390,12 +390,12 @@ export default function MemberDashboard() {
                 </TableHeader>
                 <TableBody>
                   {contributions.length > 0 ? [...contributions].reverse().slice(0, 5).map((c, idx) => (
-                    <TableRow key={idx}>
+                    <TableRow key={c.id || idx}>
                       <TableCell className="text-xs">{formatDate(c.date)}</TableCell>
                       <TableCell className="text-right font-bold text-primary text-xs">₱{c.amount.toLocaleString()}</TableCell>
                     </TableRow>
                   )) : (
-                    <TableRow>
+                    <TableRow key="no-contributions-row">
                       <TableCell colSpan={2} className="text-center py-8 text-muted-foreground italic text-xs">No contribution records found.</TableCell>
                     </TableRow>
                   )}
