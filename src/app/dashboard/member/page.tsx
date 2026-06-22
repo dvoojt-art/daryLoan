@@ -32,7 +32,10 @@ import {
   Trash2, 
   MessageSquareText,
   History,
-  Loader2
+  Loader2,
+  Wallet,
+  Coins,
+  CheckCircle2
 } from 'lucide-react';
 import {
   Dialog,
@@ -47,7 +50,7 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -64,6 +67,14 @@ export default function MemberDashboard() {
   const [editLoanerName, setEditLoanerName] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Real-time User Profile Query
+  const profileRef = useMemo(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: profile, loading: profileLoading } = useDoc<any>(profileRef);
+
   // Real-time Loans Query
   const loansQuery = useMemo(() => {
     if (!firestore || !user) return null;
@@ -76,7 +87,7 @@ export default function MemberDashboard() {
 
   const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
 
-  // Real-time Contributions Query
+  // Real-time Contributions Query for Chart
   const contributionsQuery = useMemo(() => {
     if (!firestore || !user) return null;
     return query(
@@ -166,9 +177,9 @@ export default function MemberDashboard() {
   if (!mounted) return null;
 
   const contributions = liveContributions || [];
-  const totalContributed = contributions.reduce((acc, c) => acc + c.amount, 0);
+  const totalContributed = profile?.totalContributions || contributions.reduce((acc, c) => acc + c.amount, 0);
   
-  const activeLoan = loans?.find(l => l.status === 'approved');
+  const activeLoan = loans?.find(l => l.status === 'approved' || l.status === 'overdue');
   const overdueLoan = loans?.find(l => l.status === 'overdue');
   const recentlyDecisioned = loans?.find(l => (l.status === 'approved' || l.status === 'rejected') && l.adminNote);
 
@@ -176,6 +187,13 @@ export default function MemberDashboard() {
     date: c.date,
     amount: c.amount,
   }));
+
+  const StatusBadge = ({ status }: { status?: string }) => {
+    if (!status || status === 'pending') return <Badge variant="outline" className="text-[8px] bg-slate-50 text-slate-400 border-slate-100">UNPAID</Badge>;
+    if (status === 'paid') return <Badge variant="outline" className="text-[8px] bg-green-50 text-green-700 border-green-200">PAID</Badge>;
+    if (status === 'late') return <Badge variant="outline" className="text-[8px] bg-red-50 text-red-700 border-red-200">LATE</Badge>;
+    return null;
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -189,6 +207,44 @@ export default function MemberDashboard() {
             <Plus className="mr-2 h-4 w-4" /> Request Loan
           </Link>
         </Button>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="border-none shadow-sm bg-white overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">My Community Shares</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-3xl font-bold text-slate-800">
+              {profileLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profile?.shares || 0).toLocaleString()}
+            </div>
+            <Coins className="h-8 w-8 text-accent/20" />
+          </CardContent>
+        </Card>
+        
+        <Card className="border-none shadow-sm bg-white overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Profit Distributed</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-3xl font-bold text-green-600">
+              ₱{profileLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profile?.profit || 0).toLocaleString()}
+            </div>
+            <TrendingUp className="h-8 w-8 text-green-600/20" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Savings</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-3xl font-bold text-primary">
+              ₱{profileLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profile?.totalContributions || 0).toLocaleString()}
+            </div>
+            <Wallet className="h-8 w-8 text-primary/20" />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4">
@@ -221,14 +277,13 @@ export default function MemberDashboard() {
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Contribution Growth</CardTitle>
-              <div className="text-3xl font-headline font-bold text-primary">₱{totalContributed.toLocaleString()}</div>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Contribution History</CardTitle>
             </div>
-            <TrendingUp className="h-5 w-5 text-green-500" />
+            <History className="h-5 w-5 text-primary/50" />
           </CardHeader>
           <CardContent>
             {contributionsLoading ? (
@@ -251,7 +306,7 @@ export default function MemberDashboard() {
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground italic text-sm">
-                No contribution data available yet.
+                No monthly contribution data records found.
               </div>
             )}
           </CardContent>
@@ -259,7 +314,7 @@ export default function MemberDashboard() {
 
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Loan</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Loan Balance</CardTitle>
             <CreditCard className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
@@ -271,140 +326,126 @@ export default function MemberDashboard() {
               <div className="space-y-6">
                 <div>
                   <div className="text-3xl font-headline font-bold text-slate-800">₱{activeLoan.amount.toLocaleString()}</div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none mt-1 uppercase">Status: {activeLoan.status}</Badge>
+                  <Badge className={cn(
+                    "hover:bg-opacity-80 border-none mt-1 uppercase text-[10px]",
+                    activeLoan.status === 'overdue' ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                  )}>Status: {activeLoan.status}</Badge>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-medium"><span>Repayment</span><span>40%</span></div>
-                  <Progress value={40} className="h-2 bg-slate-100" />
+                
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-muted-foreground uppercase text-[9px]">Repayment Ledger</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded">
+                      <span className="text-[8px] font-bold text-slate-400">M1</span>
+                      <StatusBadge status={activeLoan.month1} />
+                    </div>
+                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded">
+                      <span className="text-[8px] font-bold text-slate-400">M2</span>
+                      <StatusBadge status={activeLoan.month2} />
+                    </div>
+                    <div className="flex-1 flex flex-col items-center gap-1 bg-slate-50 p-2 rounded">
+                      <span className="text-[8px] font-bold text-slate-400">M3</span>
+                      <StatusBadge status={activeLoan.month3} />
+                    </div>
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t text-xs">
                   <div>
                     <p className="uppercase font-bold text-muted-foreground text-[9px]">Due Date</p>
-                    <p className="font-semibold">{formatDate(activeLoan.dueDate) || 'Pending'}</p>
+                    <p className="font-semibold">{formatDate(activeLoan.dueDate) || 'Pending Review'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="uppercase font-bold text-muted-foreground text-[9px]">Term Remaining</p>
-                    <p className="font-semibold">{activeLoan.termMonths} Mo</p>
+                    <p className="uppercase font-bold text-muted-foreground text-[9px]">Term</p>
+                    <p className="font-semibold">{activeLoan.termMonths === 0.25 ? '7 Days' : `${activeLoan.termMonths} Months`}</p>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="text-center py-12 space-y-4">
-                <Clock className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="text-xs text-muted-foreground">No active loans. Need support?</p>
-                <Button asChild size="sm" variant="outline" className="w-full"><Link href="/dashboard/member/request">Request Now</Link></Button>
+                <CheckCircle2 className="h-8 w-8 text-green-500/20 mx-auto" />
+                <p className="text-xs text-muted-foreground">No active debts. Your account is clear.</p>
+                <Button asChild size="sm" variant="outline" className="w-full"><Link href="/dashboard/member/request">Request Credit</Link></Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-none shadow-sm bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Request History</CardTitle>
-            <CardDescription>Real-time status and admin release notes.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loansLoading ? (
-              <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    <TableHead className="font-bold">Loaner / Purpose</TableHead>
-                    <TableHead className="font-bold">Status</TableHead>
-                    <TableHead className="font-bold">Date</TableHead>
-                    <TableHead className="text-right font-bold">Principal</TableHead>
-                    <TableHead className="text-right font-bold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loans && loans.length > 0 ? loans.map((l) => (
-                    <TableRow key={l.id} className="group transition-colors border-b">
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-800 text-xs">{l.loanerName || 'Self'}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
-                          {l.adminNote && (
-                            <div className="mt-1 flex items-start gap-1 bg-primary/5 p-1 rounded border border-primary/10">
-                              <MessageSquareText className="h-2 w-2 text-primary mt-0.5 shrink-0" />
-                              <span className="text-[9px] text-primary italic font-medium leading-tight">Note: {l.adminNote}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn(
-                          "capitalize text-[9px] font-bold",
-                          l.status === 'approved' ? "bg-green-50 text-green-700" : 
-                          l.status === 'pending' ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"
-                        )}>
-                          {l.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-[10px] text-muted-foreground">{formatDate(l.requestDate)}</TableCell>
-                      <TableCell className="text-right font-bold text-slate-700 text-xs">₱{l.amount.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {l.status === 'pending' && (
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary" onClick={() => handleEditLoan(l)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-destructive" onClick={() => handleDeleteLoan(l.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
+      <Card className="border-none shadow-sm bg-white">
+        <CardHeader>
+          <CardTitle className="text-lg">Loan Request History</CardTitle>
+          <CardDescription>Track the lifecycle of your community credit requests.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loansLoading ? (
+            <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50">
+                  <TableHead className="font-bold text-[10px] uppercase">Loaner / Purpose</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase">Principal</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase">Status</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-center">Ledger M1</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-center">Ledger M2</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-center">Ledger M3</TableHead>
+                  <TableHead className="text-right font-bold text-[10px] uppercase pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loans && loans.length > 0 ? loans.map((l) => (
+                  <TableRow key={l.id} className="group transition-colors border-b">
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 text-xs">{l.loanerName || 'Self'}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">{l.purpose}</span>
+                        {l.adminNote && (
+                          <div className="mt-1 flex items-start gap-1 bg-primary/5 p-1 rounded border border-primary/10 max-w-[200px]">
+                            <MessageSquareText className="h-2 w-2 text-primary mt-0.5 shrink-0" />
+                            <span className="text-[9px] text-primary italic font-medium leading-tight">Note: {l.adminNote}</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-700 text-xs">₱{l.amount.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn(
+                        "capitalize text-[9px] font-bold",
+                        l.status === 'approved' ? "bg-green-50 text-green-700" : 
+                        l.status === 'pending' ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700"
+                      )}>
+                        {l.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center"><StatusBadge status={l.month1} /></TableCell>
+                    <TableCell className="text-center"><StatusBadge status={l.month2} /></TableCell>
+                    <TableCell className="text-center"><StatusBadge status={l.month3} /></TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex justify-end gap-1">
+                        {l.status === 'pending' && (
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary" onClick={() => handleEditLoan(l)}>
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow key="no-loans-row">
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic text-xs">No loan records found.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Recent Contributions</CardTitle>
-              <CardDescription>Your savings activity log.</CardDescription>
-            </div>
-            <History className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-0">
-            {contributionsLoading ? (
-              <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    <TableHead className="font-bold">Date</TableHead>
-                    <TableHead className="text-right font-bold">Amount</TableHead>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-destructive" onClick={() => handleDeleteLoan(l.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contributions.length > 0 ? [...contributions].reverse().slice(0, 5).map((c, idx) => (
-                    <TableRow key={c.id || idx}>
-                      <TableCell className="text-xs">{formatDate(c.date)}</TableCell>
-                      <TableCell className="text-right font-bold text-primary text-xs">₱{c.amount.toLocaleString()}</TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow key="no-contributions-row">
-                      <TableCell colSpan={2} className="text-center py-8 text-muted-foreground italic text-xs">No contribution records found.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                )) : (
+                  <TableRow key="no-loans-row">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground italic text-xs">No loan records found in your portal.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
