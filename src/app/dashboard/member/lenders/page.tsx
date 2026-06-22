@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search, Users, Filter, Loader2 } from 'lucide-react';
+import { Search, Users, Filter, Loader2, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
@@ -88,13 +88,14 @@ export default function LendersDirectoryPage() {
                   <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Name</TableHead>
                   <TableHead className="hidden md:table-cell font-bold text-slate-800 text-[11px] uppercase tracking-wider">Email</TableHead>
                   <TableHead className="hidden sm:table-cell font-bold text-slate-800 text-[11px] uppercase tracking-wider">Joined</TableHead>
+                  <TableHead className="hidden sm:table-cell font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Shares</TableHead>
                   <TableHead className="text-right pr-6 font-bold text-slate-800 text-[11px] uppercase tracking-wider">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center">
+                    <TableCell colSpan={6} className="h-32 text-center">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground italic">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Syncing directory...
@@ -115,6 +116,9 @@ export default function LendersDirectoryPage() {
                       <TableCell className="font-bold text-slate-700">{lender.name || 'Anonymous'}</TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground text-sm">{lender.email}</TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">{formatDate(lender.joinDate)}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-right font-semibold text-slate-700">
+                        ₱{(lender.shares || 0).toLocaleString()}
+                      </TableCell>
                       <TableCell className="text-right pr-6">
                         <Badge 
                           variant="outline" 
@@ -132,7 +136,7 @@ export default function LendersDirectoryPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">
+                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
                       No members found matching your search.
                     </TableCell>
                   </TableRow>
@@ -146,7 +150,7 @@ export default function LendersDirectoryPage() {
       <div className="p-4 bg-slate-800 rounded-2xl text-white flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-4">
           <div className="bg-white/10 p-2 rounded-xl">
-            <Users className="h-6 w-6 text-accent" />
+            <Coins className="h-6 w-6 text-accent" />
           </div>
           <div>
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Community Engagement</p>
