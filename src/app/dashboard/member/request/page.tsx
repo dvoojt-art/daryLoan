@@ -29,7 +29,7 @@ import {
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, addDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -59,20 +59,22 @@ export default function LoanRequestPage() {
 
   const { data: contributions, loading: contributionsLoading } = useCollection<any>(contributionsQuery);
 
-  // Fetch all members for comaker selection
+  // Fetch all users to find members for comaker selection
+  // Using a broad query to ensure immediate synchronization without complex index requirements
   const membersQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('role', '==', 'member'));
+    return collection(firestore, 'users');
   }, [firestore]);
 
-  const { data: members, loading: membersLoading } = useCollection<any>(membersQuery);
+  const { data: allUsers, loading: membersLoading } = useCollection<any>(membersQuery);
 
-  // Filter out current user from comaker list
+  // Filter for members and exclude current user on the client side for better sync performance
   const availableComakers = useMemo(() => {
-    if (!members || !user) return [];
-    // We filter by email as it's the unique identifier across different doc creation methods
-    return members.filter(m => m.email !== user.email);
-  }, [members, user]);
+    if (!allUsers || !user) return [];
+    return allUsers
+      .filter(u => u.role === 'member' && u.email !== user.email && u.status === 'active')
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [allUsers, user]);
 
   // Dynamic Probability Logic
   const { consistencyScore, probabilityResult } = useMemo(() => {
@@ -195,14 +197,14 @@ export default function LoanRequestPage() {
                   <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                   <Select value={comakerId} onValueChange={setComakerId}>
                     <SelectTrigger id="comaker" className="pl-10 h-11">
-                      <SelectValue placeholder="Select a co-maker" />
+                      <SelectValue placeholder={membersLoading ? "Loading members..." : "Select a co-maker"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No Co-Maker</SelectItem>
                       {availableComakers.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           <div className="flex flex-col text-left">
-                            <span className="font-bold">{m.name}</span>
+                            <span className="font-bold">{m.name || 'Unnamed Member'}</span>
                             <span className="text-[10px] text-muted-foreground">{m.email}</span>
                           </div>
                         </SelectItem>
@@ -292,7 +294,9 @@ export default function LoanRequestPage() {
 
         <div className="space-y-6">
           <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest mb-2">
-            <FunctionSquare className="h-4 w-4" />
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <FunctionSquare className="h-4 w-4" />
+            </div>
             Live Formula Engine
           </div>
           

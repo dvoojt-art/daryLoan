@@ -43,6 +43,7 @@ export default function AdminLoanApprovals() {
     setMounted(true);
   }, []);
 
+  // Fetch only pending loans for the approval queue
   const loansQuery = useMemo(() => {
     if (!firestore) return null;
     return query(
@@ -51,22 +52,23 @@ export default function AdminLoanApprovals() {
     );
   }, [firestore]);
 
+  // Fetch all users to correctly display member and comaker names
   const membersQuery = useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
   }, [firestore]);
 
-  const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
-  const { data: members } = useCollection<any>(membersQuery);
+  const { data: rawLoans, loading: loansLoading } = useCollection<any>(loansQuery);
+  const { data: members, loading: membersLoading } = useCollection<any>(membersQuery);
 
-  const selectedLoan = useMemo(() => loans?.find(l => l.id === selectedLoanId), [loans, selectedLoanId]);
+  const selectedLoan = useMemo(() => rawLoans?.find(l => l.id === selectedLoanId), [rawLoans, selectedLoanId]);
 
+  // Fetch contributions for the selected member to feed the GenAI tool
   const contributionsQuery = useMemo(() => {
     if (!firestore || !selectedLoan?.memberId) return null;
     return query(
       collection(firestore, 'contributions'),
-      where('memberId', '==', selectedLoan.memberId),
-      orderBy('date', 'desc')
+      where('memberId', '==', selectedLoan.memberId)
     );
   }, [firestore, selectedLoan?.memberId]);
 
@@ -88,13 +90,13 @@ export default function AdminLoanApprovals() {
   const handleAction = (id: string, action: 'approved' | 'rejected') => {
     if (!firestore) return;
     
-    const loan = loans?.find(l => l.id === id);
+    const loan = rawLoans?.find(l => l.id === id);
     const member = getMember(loan?.memberId || '');
-    const loanerName = loan?.loanerName || member?.name || 'Unknown';
+    const loanerName = loan?.loanerName || member?.name || 'Unknown Member';
     
     const loanRef = doc(firestore, 'loans', id);
     const dueDate = action === 'approved' 
-      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+      ? new Date().toISOString().split('T')[0] // Set initial release date to today
       : null;
 
     const updateData = { 
@@ -124,11 +126,11 @@ export default function AdminLoanApprovals() {
   };
 
   const filteredLoans = useMemo(() => {
-    if (!loans) return [];
+    if (!rawLoans) return [];
     
     const searchLower = search.toLowerCase().trim();
     
-    return loans
+    return rawLoans
       .filter(l => {
         if (!searchLower) return true;
         
@@ -141,16 +143,12 @@ export default function AdminLoanApprovals() {
                loanerName.includes(searchLower) || 
                purpose.includes(searchLower);
       })
-      .sort((a, b) => {
-        const dateA = a.requestDate || '';
-        const dateB = b.requestDate || '';
-        return dateB.localeCompare(dateA);
-      });
-  }, [loans, members, search]);
+      .sort((a, b) => (b.requestDate || '').localeCompare(a.requestDate || ''));
+  }, [rawLoans, members, search]);
 
   const selectedMember = selectedLoan ? getMember(selectedLoan.memberId) : null;
   const selectedComaker = selectedLoan?.comakerId ? getMember(selectedLoan.comakerId) : null;
-  const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown';
+  const selectedLoanerName = selectedLoan?.loanerName || selectedMember?.name || 'Unknown Member';
 
   if (!mounted) return null;
 
@@ -165,14 +163,14 @@ export default function AdminLoanApprovals() {
           <Clock className="h-5 w-5 text-primary" />
           <div>
             <p className="text-[10px] uppercase font-bold text-muted-foreground">Pending Requests</p>
-            <p className="text-lg font-bold text-primary">{loans?.length || 0}</p>
+            <p className="text-lg font-bold text-primary">{rawLoans?.length || 0}</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-none shadow-sm">
-          <CardHeader className="pb-3 border-b">
+        <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
+          <CardHeader className="pb-3 border-b bg-white">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <div className="relative w-full sm:max-w-md">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -189,7 +187,7 @@ export default function AdminLoanApprovals() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {loansLoading ? (
+            {loansLoading || membersLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mb-2" />
                 <p>Syncing approval queue...</p>
@@ -198,36 +196,36 @@ export default function AdminLoanApprovals() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/50">
-                    <TableHead className="font-bold">Loaner / Member Account</TableHead>
-                    <TableHead className="font-bold">Principal</TableHead>
-                    <TableHead className="font-bold hidden md:table-cell">Request Date</TableHead>
-                    <TableHead className="text-right font-bold">Quick Actions</TableHead>
+                    <TableHead className="font-bold py-4 pl-6 uppercase text-[10px] tracking-widest">Loaner / Account</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest">Principal</TableHead>
+                    <TableHead className="font-bold hidden md:table-cell uppercase text-[10px] tracking-widest">Request Date</TableHead>
+                    <TableHead className="text-right font-bold pr-6 uppercase text-[10px] tracking-widest">Quick Review</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLoans.map((loan) => {
                     const member = getMember(loan.memberId);
                     const comaker = loan.comakerId ? getMember(loan.comakerId) : null;
-                    const loanerName = loan.loanerName || member?.name || 'Unknown';
+                    const loanerName = loan.loanerName || member?.name || 'Unknown Member';
                     const isSelected = selectedLoanId === loan.id;
                     
                     return (
                       <TableRow 
                         key={loan.id} 
                         className={cn(
-                          "group transition-colors cursor-pointer",
+                          "group transition-colors cursor-pointer border-b last:border-0",
                           isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-slate-50"
                         )}
                         onClick={() => setSelectedLoanId(loan.id)}
                       >
-                        <TableCell>
+                        <TableCell className="pl-6 py-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 border border-slate-200">
+                            <Avatar className="h-10 w-10 border border-slate-200 shadow-sm">
                               <AvatarImage src={`https://picsum.photos/seed/${loan.memberId}/100/100`} />
-                              <AvatarFallback>{loanerName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">{loanerName.substring(0, 2).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col">
-                              <span className="font-bold text-slate-800">{loanerName}</span>
+                              <span className="font-bold text-slate-800 text-sm">{loanerName}</span>
                               <div className="flex flex-col gap-0.5 mt-0.5">
                                 <span className="text-[9px] text-muted-foreground uppercase flex items-center gap-1">
                                   <User className="h-2 w-2" /> Member: {member?.name || 'Loading...'}
@@ -242,17 +240,17 @@ export default function AdminLoanApprovals() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="font-semibold text-slate-700">₱{loan.amount.toLocaleString()}</span>
+                          <span className="font-bold text-slate-700">₱{loan.amount.toLocaleString()}</span>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                          <div className="flex items-center gap-2 text-muted-foreground text-[10px] font-medium">
                             <Calendar className="h-3 w-3" />
                             {formatDate(loan.requestDate)}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="text-xs font-bold text-primary">
-                            Review Request
+                        <TableCell className="text-right pr-6">
+                          <Button variant="ghost" size="sm" className="text-[10px] font-bold text-primary uppercase h-8 hover:bg-primary hover:text-white transition-colors">
+                            {isSelected ? 'Reviewing' : 'Open Request'}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -263,8 +261,11 @@ export default function AdminLoanApprovals() {
             )}
             {!loansLoading && filteredLoans.length === 0 && (
               <div className="text-center py-20 bg-slate-50/50">
-                <Check className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 font-medium">All caught up! No pending requests.</p>
+                <div className="bg-white p-4 rounded-full w-fit mx-auto shadow-sm border border-slate-100 mb-4">
+                  <Check className="h-8 w-8 text-green-500" />
+                </div>
+                <p className="text-slate-800 font-bold">Queue Empty</p>
+                <p className="text-slate-500 text-xs">All caught up! No pending requests at the moment.</p>
               </div>
             )}
           </CardContent>
@@ -273,52 +274,56 @@ export default function AdminLoanApprovals() {
         <div className="space-y-6">
           {selectedLoanId && selectedLoan ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <Card className="border-none shadow-sm overflow-hidden">
-                <CardHeader className="bg-slate-800 text-white pb-6">
+              <Card className="border-none shadow-sm overflow-hidden bg-white">
+                <CardHeader className="bg-[#010642] text-white pb-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-xl">Request Summary</CardTitle>
-                      <CardDescription className="text-slate-400">Reviewing details for {selectedLoanerName}</CardDescription>
+                      <CardTitle className="text-xl font-headline">Request Summary</CardTitle>
+                      <CardDescription className="text-slate-400 text-xs">Reviewing details for {selectedLoanerName}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Principal</p>
-                      <p className="text-xl font-bold text-slate-800">₱{selectedLoan.amount.toLocaleString()}</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Principal</p>
+                      <p className="text-2xl font-bold text-slate-800">₱{selectedLoan.amount.toLocaleString()}</p>
                     </div>
                     <div className="space-y-1 text-right">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Term</p>
-                      <p className="text-xl font-bold text-slate-800">
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Term</p>
+                      <p className="text-2xl font-bold text-slate-800">
                         {selectedLoan.termMonths === 0.25 ? '7 Days' : `${selectedLoan.termMonths} Mo`}
                       </p>
                     </div>
                   </div>
 
                   {selectedComaker && (
-                    <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl space-y-1">
-                      <p className="text-[10px] uppercase font-bold text-primary/70 flex items-center gap-1">
+                    <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-2">
+                      <p className="text-[10px] uppercase font-bold text-primary/70 flex items-center gap-1 tracking-widest">
                         <Users className="h-3 w-3" /> Verified Co-Maker
                       </p>
-                      <p className="text-sm font-bold text-slate-800">{selectedComaker.name}</p>
-                      <p className="text-[9px] text-muted-foreground italic">Shares: {selectedComaker.shares?.toLocaleString() || 0} • Savings: ₱{selectedComaker.totalContributions?.toLocaleString() || 0}</p>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{selectedComaker.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Shares: {selectedComaker.shares?.toLocaleString() || 0} • Savings: ₱{selectedComaker.totalContributions?.toLocaleString() || 0}
+                        </p>
+                      </div>
                     </div>
                   )}
 
-                  <div className="p-4 bg-slate-50 rounded-xl space-y-2">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Loan Purpose</p>
-                    <p className="text-sm text-slate-700 italic">"{selectedLoan.purpose}"</p>
+                  <div className="p-4 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Loan Purpose</p>
+                    <p className="text-sm text-slate-700 italic leading-relaxed">"{selectedLoan.purpose}"</p>
                   </div>
 
                   <div className="space-y-3">
-                    <Label htmlFor="admin-note" className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
+                    <Label htmlFor="admin-note" className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2 tracking-widest">
                       <MessageSquareQuote className="h-3 w-3" /> Add Note to Member
                     </Label>
                     <Textarea 
                       id="admin-note"
-                      placeholder="e.g., Release funds on Friday morning. Please visit the office."
-                      className="text-xs resize-none"
+                      placeholder="e.g., Funds ready for release. Please visit the office."
+                      className="text-xs resize-none bg-slate-50/50"
                       rows={3}
                       value={adminNote}
                       onChange={(e) => setAdminNote(e.target.value)}
@@ -335,14 +340,14 @@ export default function AdminLoanApprovals() {
 
               <div className="flex gap-3">
                 <Button 
-                  className="flex-1 bg-green-600 hover:bg-green-700 h-11"
+                  className="flex-1 bg-green-600 hover:bg-green-700 h-12 shadow-lg shadow-green-200"
                   onClick={() => handleAction(selectedLoanId, 'approved')}
                 >
                   <Check className="mr-2 h-4 w-4" /> Approve
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/5 h-11"
+                  className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/5 h-12"
                   onClick={() => handleAction(selectedLoanId, 'rejected')}
                 >
                   <X className="mr-2 h-4 w-4" /> Reject
@@ -350,10 +355,15 @@ export default function AdminLoanApprovals() {
               </div>
             </div>
           ) : (
-            <Card className="border-dashed flex items-center justify-center p-12 h-[400px] bg-muted/20">
+            <Card className="border-dashed border-2 flex items-center justify-center p-12 h-[450px] bg-slate-50/30">
               <div className="text-center space-y-4">
-                <BrainCircuit className="h-8 w-8 text-muted-foreground mx-auto" />
-                <p className="text-xs text-muted-foreground max-w-[180px] mx-auto">Select a request from the list to see member financials, co-maker details, and perform AI assessment.</p>
+                <div className="bg-white p-6 rounded-full w-fit mx-auto shadow-sm border border-slate-100">
+                  <BrainCircuit className="h-10 w-10 text-primary/40" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Select a Request</p>
+                  <p className="text-[10px] text-muted-foreground max-w-[200px] mx-auto mt-1 uppercase tracking-tight font-medium">Click a row to analyze member financials, verify co-maker details, and perform AI assessment.</p>
+                </div>
               </div>
             </Card>
           )}
