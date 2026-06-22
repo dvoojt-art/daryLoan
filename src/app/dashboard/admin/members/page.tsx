@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -307,7 +306,7 @@ export default function AdminMembersManagement() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="shares">Shares (₱)</Label>
+                    <Label htmlFor="shares">Shares</Label>
                     <Input 
                       id="shares" 
                       type="number"
@@ -317,7 +316,7 @@ export default function AdminMembersManagement() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="contributions">Contributions (₱)</Label>
+                    <Label htmlFor="contributions">Contributions</Label>
                     <Input 
                       id="contributions" 
                       type="number"
