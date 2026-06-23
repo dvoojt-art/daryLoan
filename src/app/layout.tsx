@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'DaryLoan | Smart Loan Management',
   description: 'Automate member records, loan management, and financial reporting with DaryLoan.',
   icons: {
-    icon: '/dl2.png'
+    icon: '/dl2.ico'
   },
 };
 
