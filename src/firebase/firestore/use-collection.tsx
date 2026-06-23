@@ -1,14 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Query, onSnapshot, QuerySnapshot, DocumentData, FirestoreError,} from 'firebase/firestore';
-import { errorEmitter } from '../error-emitter';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Query,
+  onSnapshot,
+  QuerySnapshot,
+  DocumentData,
+  FirestoreError,
+} from 'firebase/firestore';
+
 import { FirestorePermissionError } from '../errors';
+import { playNotification } from '../../lib/notification';
 
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<(T & { id: string })[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestorePermissionError | null>(null);
+
+  const initialLoad = useRef(true);
+  const seenIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!query) {
@@ -23,21 +33,42 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           ...doc.data(),
           id: doc.id,
         }));
+
+        // ✅ First load: mark everything as already seen
+        if (initialLoad.current) {
+          docs.forEach((doc: any) => {
+            seenIds.current.add(doc.id);
+          });
+
+          initialLoad.current = false;
+        } 
+        // 🔔 After first load: detect new docs only
+        else {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+              const id = change.doc.id;
+
+              // Only trigger if truly new
+              if (!seenIds.current.has(id)) {
+                seenIds.current.add(id);
+                notification();
+              }
+            }
+          });
+        }
+
         setData(docs);
         setLoading(false);
       },
 
-      async (serverError: FirestoreError) => {
-        console.error("REAL FIRESTORE ERROR:", serverError);
-        
-        const path =(query as any).path || (query as any)._query?.path?.toString() || 'unknown-collection';
-        
+      (serverError: FirestoreError) => {
+        console.error('Firestore error:', serverError);
+
         const permissionError = new FirestorePermissionError({
-          path: path,
+          path: (query as any)?.path || 'unknown-collection',
           operation: 'list',
         });
 
-        //errorEmitter.emit('permission-error', permissionError);
         setError(permissionError);
         setLoading(false);
       }
