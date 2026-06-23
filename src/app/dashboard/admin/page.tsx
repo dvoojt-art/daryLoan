@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { TextRun } from 'docx';
 
 export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -60,7 +61,8 @@ export default function AdminDashboard() {
 
   const recentActivityQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'loans'), orderBy('requestDate', 'desc'), limit(10));
+    return query(collection(firestore, 'loans'),
+    );
   }, [firestore]);
 
   const { data: allLoans, loading: loansLoading } = useCollection<any>(loansQuery);
@@ -99,6 +101,17 @@ export default function AdminDashboard() {
       estimatedInterest,
     };
   }, [allLoans, allMembers]);
+
+       const recentActivityWithNames = useMemo(() => {
+    if (!recentActivity || !allMembers) return [];
+    return recentActivity.map((loan: any) => {
+      const member = allMembers.find((m: any) => m.id === loan.memberId);
+      return {
+        ...loan,
+        resolvedName: loan.loanerName || member?.name || member?.email || `Member ${loan.memberId.substring(0, 5)}`,
+      };
+    });
+  }, [recentActivity, allMembers]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -143,15 +156,15 @@ export default function AdminDashboard() {
       headStyles: { fillColor: [1, 6, 66] },
     });
 
-    if (recentActivity && recentActivity.length > 0) {
+     if (recentActivityWithNames && recentActivityWithNames.length > 0) {
       doc.text('2. Recent Financial Activity', 14, (doc as any).lastAutoTable.finalY + 15);
       
       autoTable(doc, {
         startY: (doc as any).lastAutoTable.finalY + 20,
         head: [['Date', 'Member/Loaner', 'Amount', 'Status', 'Purpose']],
-        body: recentActivity.map((loan: any) => [
+        body: recentActivityWithNames.map((loan: any) => [
           formatDate(loan.requestDate),
-          loan.loanerName || 'Unknown',
+          loan.resolvedName,
           `P${loan.amount.toLocaleString()}`,
           loan.status.toUpperCase(),
           loan.purpose,
@@ -214,10 +227,10 @@ export default function AdminDashboard() {
                   new TableCell({ children: [new Paragraph({ text: "Status", bold: true })], shading: { fill: "F2F2F2" } }),
                 ],
               }),
-              ...(recentActivity || []).map((loan: any) => new TableRow({
-                children: [
+               ...(recentActivityWithNames || []).map((loan: any) => new TableRow({
+               children: [
                   new TableCell({ children: [new Paragraph(formatDate(loan.requestDate))] }),
-                  new TableCell({ children: [new Paragraph(loan.loanerName || 'Unknown')] }),
+                  new TableCell({ children: [new Paragraph(loan.resolvedName)] }),
                   new TableCell({ children: [new Paragraph(`P${loan.amount.toLocaleString()}`)] }),
                   new TableCell({ children: [new Paragraph(loan.status.toUpperCase())] }),
                 ]
@@ -334,11 +347,11 @@ export default function AdminDashboard() {
           <CardContent>
             {loansLoading ? (
               <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
-            ) : recentActivity?.length === 0 ? (
+            ) : recentActivityWithNames?.length === 0 ? (
               <p className="text-center py-10 text-muted-foreground italic text-sm">No recent activity detected.</p>
             ) : (
               <div className="space-y-4">
-                {recentActivity?.map((loan: any) => (
+                {recentActivityWithNames?.map((loan: any) => (
                   <div key={loan.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0 group transition-colors hover:bg-slate-50 p-2 rounded-lg">
                     <div className={cn(
                       "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border transition-all",
@@ -352,7 +365,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <p className="text-sm font-bold text-slate-800">{loan.loanerName || 'Unknown'} - ₱{loan.amount.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-slate-800">{loan.resolvedName} - ₱{loan.amount.toLocaleString()}</p>
                         <Badge variant="outline" className="text-[8px] h-4 uppercase">{loan.status}</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-tight">{loan.purpose} • {formatDate(loan.requestDate)}</p>

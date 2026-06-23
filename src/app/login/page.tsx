@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wallet, ShieldCheck, User, Lock, Mail, Loader2, ArrowLeft } from 'lucide-react';
+import { Wallet, ShieldCheck, User, Lock, Mail, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent, role: 'admin' | 'member') => {
     e.preventDefault();
@@ -27,27 +29,30 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userEmail = userCredential.user.email?.toLowerCase();
       
-      // Basic role-based redirection based on email provided in prompt
-      // Admin email: admin@daryloan.com
-      // Member email: sinking@daryloan.com
-      if (email === 'admin@daryloan.com' && role === 'admin') {
-        router.push('/dashboard/admin');
-      } else if (email === 'sinking@daryloan.com' && role === 'member') {
-        router.push('/dashboard/member');
-      } else {
-        // Fallback for demo purposes if roles don't match specific accounts
+      // Admin can access both portals.
+      if (userEmail === 'admin@daryloan.com') {
         router.push(`/dashboard/${role}`);
+      // Members can only access the member portal.
+      } else if (userEmail && role === 'member') {
+        router.push('/dashboard/member');
+      // Deny access if a member tries to log into the admin portal.
+      } else {
+        await auth.signOut();
+        throw new Error("Access denied. You are not authorized to access the admin portal.");
       }
       
       toast({
         title: "Welcome back!",
         description: "Successfully signed into your portal.",
       });
+
     } catch (error: any) {
       toast({
         variant: "destructive",
+        icon: <AlertTriangle className="h-4 w-4" />,
         title: "Authentication Failed",
         description: error.message || "Invalid email or password.",
       });
@@ -111,7 +116,7 @@ export default function LoginPage() {
                       <Input 
                         id="member-email" 
                         type="email" 
-                        placeholder="member@daryloan.com" 
+                        placeholder="sinking@daryloan.com" 
                         className="pl-10" 
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -125,15 +130,23 @@ export default function LoginPage() {
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="member-password" 
-                        type="password" 
-                        placeholder="••••••••" 
-                        className="pl-10" 
+                      <Input
+                        id="member-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        required 
+                        required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                      </button>
                     </div>
                   </div>
                 </CardContent>
@@ -173,21 +186,29 @@ export default function LoginPage() {
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="admin-password" 
-                        type="password" 
-                        placeholder="••••••••" 
-                        className="pl-10" 
+                      <Input
+                        id="admin-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        required 
+                        required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                      </button>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
                   <Button type="submit" className="w-full bg-primary" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Enter Admin Console'}
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Sign in as Admin'}
                   </Button>
                 </CardFooter>
               </form>

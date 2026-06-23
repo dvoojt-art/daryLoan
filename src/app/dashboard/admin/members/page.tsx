@@ -7,25 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +38,7 @@ import { collection, addDoc, deleteDoc, doc, updateDoc, query, where } from 'fir
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+
 export default function AdminMembersManagement() {
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -81,7 +65,7 @@ export default function AdminMembersManagement() {
 
   const membersQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('role', '==', 'member'));
+    return query(collection(firestore, 'users' ), where('role', '==', 'member'));
   }, [firestore]);
 
   const { data: members, loading } = useCollection<any>(membersQuery);
@@ -353,7 +337,7 @@ export default function AdminMembersManagement() {
                   <Label htmlFor="name">Full Name</Label>
                   <Input 
                     id="name" 
-                    placeholder="e.g. Maria Clara"
+                    placeholder="e.g., Daryl Cortes"
                     value={newMember.name}
                     onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
                   />
@@ -363,7 +347,7 @@ export default function AdminMembersManagement() {
                   <Input 
                     id="email" 
                     type="email"
-                    placeholder="maria@example.com"
+                    placeholder="daryl@sample.com"
                     value={newMember.email}
                     onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
                   />

@@ -64,7 +64,9 @@ import {
   Loader2,
   FileText,
   FileBox,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Users,
+  User
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -73,6 +75,7 @@ import { collection, query, doc, updateDoc, deleteDoc, addDoc, orderBy } from 'f
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format } from 'date-fns';
+
 
 export default function AdminLedgerPage() {
   const [search, setSearch] = useState('');
@@ -86,6 +89,7 @@ export default function AdminLedgerPage() {
   // Form State
   const [formState, setFormState] = useState({
     memberId: '',
+    comakerId: '',
     loanerName: '',
     amount: '',
     purpose: '',
@@ -103,7 +107,8 @@ export default function AdminLedgerPage() {
   // Real-time data
   const loansQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'loans'), orderBy('requestDate', 'desc'));
+    return query(collection(firestore, 'loans'),
+    );
   }, [firestore]);
 
   const membersQuery = useMemo(() => {
@@ -133,6 +138,7 @@ export default function AdminLedgerPage() {
     if (!rawLoans) return [];
     return rawLoans.map(loan => {
       const member = members?.find(m => m.id === loan.memberId);
+       const comaker = members?.find(m => m.id === loan.comakerId);
       const m1 = loan.month1 || 'pending';
       const m2 = loan.month2 || 'pending';
       const m3 = loan.month3 || 'pending';
@@ -144,7 +150,8 @@ export default function AdminLedgerPage() {
 
       return {
         ...loan,
-        memberName: member?.name || 'Unknown',
+        memberName: member?.name || member?.email || (loan.memberId ? `Member ${loan.memberId.substring(0, 5)}` : 'Unknown'),
+        comakerName: comaker?.name || comaker?.email || null,
         interest,
         total,
         month1: m1,
@@ -198,6 +205,7 @@ export default function AdminLedgerPage() {
     const termNum = parseFloat(formState.termMonths);
     const data = {
       memberId: formState.memberId,
+      comakerId: formState.comakerId === 'none' ? null : (formState.comakerId || null),
       loanerName: formState.loanerName,
       amount: amountNum,
       purpose: formState.purpose,
@@ -219,7 +227,7 @@ export default function AdminLedgerPage() {
     } else {
       addDoc(collection(firestore, 'loans'), data).then(() => {
         setIsAddDialogOpen(false);
-        setFormState({ memberId: '', loanerName: '', amount: '', purpose: '', termMonths: '1', adminNote: '' });
+        setFormState({ memberId: '', comakerId: '', loanerName: '', amount: '', purpose: '', termMonths: '1', adminNote: '' });
         toast({ title: "New Ledger Entry Added" });
       });
     }
@@ -228,6 +236,7 @@ export default function AdminLedgerPage() {
   const filteredLedger = processedLedger.filter(tx => 
     tx.memberName.toLowerCase().includes(search.toLowerCase()) ||
     (tx.loanerName && tx.loanerName.toLowerCase().includes(search.toLowerCase())) ||
+    (tx.comakerName && tx.comakerName.toLowerCase().includes(search.toLowerCase())) ||
     tx.purpose.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -441,17 +450,19 @@ export default function AdminLedgerPage() {
                     <TableCell className="pl-6 py-4">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
-                        {tx.loanerName && <span className="text-[10px] text-primary italic font-medium">L: {tx.loanerName}</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-bold">₱{tx.amount.toLocaleString()}</TableCell>
-                    <TableCell className="text-primary font-bold">₱{tx.interest.toLocaleString()}</TableCell>
-                    <TableCell className="font-bold text-slate-900">₱{tx.total.toLocaleString()}</TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <StatusSelect id={tx.id} monthKey="month1" currentStatus={tx.month1} />
-                        <DateSelect id={tx.id} monthDateKey="month1Date" currentDate={tx.month1Date} />
+                         <div className="flex flex-col gap-0.5 mt-0.5">
+                          {tx.loanerName && tx.loanerName !== tx.memberName && (
+                            <span className="text-[10px] text-primary italic font-medium flex items-center gap-1">
+                              <User className="h-2 w-2" /> For: {tx.loanerName}
+                            </span>
+                          )}
+                          {tx.comakerName && (
+                            <span className="text-[9px] text-muted-foreground uppercase flex items-center gap-1 font-bold">
+                              <Users className="h-2 w-2" /> Co-Maker: {tx.comakerName}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -502,6 +513,18 @@ export default function AdminLedgerPage() {
                 <SelectTrigger><SelectValue placeholder="Choose a member" /></SelectTrigger>
                 <SelectContent>
                   {members?.filter(m => m.role === 'member').map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+             <div className="space-y-2">
+              <Label>Co-Maker (Optional)</Label>
+              <Select value={formState.comakerId || 'none'} onValueChange={(v) => setFormState({ ...formState, comakerId: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue placeholder="Select a co-maker" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Co-Maker</SelectItem>
+                  {members?.filter(m => m.role === 'member' && m.id !== formState.memberId).map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                   ))}
                 </SelectContent>

@@ -72,7 +72,7 @@ export default function LendersDirectoryPage() {
             <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search lenders by name or email..."
+                placeholder="Search loaners by name or email..."
                 className="pl-10 h-10 border-slate-200"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

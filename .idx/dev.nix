@@ -15,7 +15,7 @@
   services.firebase.emulators = {
     # Disabling because we are using prod backends right now
     detect = false;
-    projectId = "demo-app";
+    projectId = "studio-547639024-dacfc";
     services = ["auth" "firestore"];
   };
   idx = {

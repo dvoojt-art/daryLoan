@@ -322,7 +322,7 @@ export default function AdminLoanApprovals() {
                     </Label>
                     <Textarea 
                       id="admin-note"
-                      placeholder="e.g., Funds ready for release. Please visit the office."
+                      placeholder="e.g., Funds ready for release. Please message the admin asap."
                       className="text-xs resize-none bg-slate-50/50"
                       rows={3}
                       value={adminNote}

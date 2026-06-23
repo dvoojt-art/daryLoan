@@ -59,7 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const loansQuery = useMemo(() => {
     if (!firestore || !user) return null;
     if (isAdmin) return collection(firestore, 'loans');
-    return query(collection(firestore, 'loans'), where('memberId', '==', user.uid));
+    return query(collection(firestore, 'loans'),
+    where('memberId', '==', user.uid));
   }, [firestore, user, isAdmin]);
 
   const usersQuery = useMemo(() => {

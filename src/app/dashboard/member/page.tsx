@@ -83,7 +83,7 @@ export default function MemberDashboard() {
     return query(
       collection(firestore, 'loans'),
       where('memberId', '==', user.uid),
-      orderBy('requestDate', 'desc')
+      
     );
   }, [firestore, user]);
 

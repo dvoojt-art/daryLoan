@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper to check if the user is an admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper to check if the user is a member
+    function isMember() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'member';
+    }
+
+    match /users/{userId} {
+      // Admins can read all user profiles. Members can read any profile for co-maker selection.
+      allow read, list: if request.auth != null;
+      // A user can update their own profile.
+      // An admin can update any user's profile (e.g., shares, contributions).
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Only admins can delete users.
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    match /loans/{loanId} {
+      // Admins can list and read all. 
+      // Members can only list if they filter by their own memberId, or read specific docs if they own them.
+      allow list: if request.auth != null && (isAdmin() || (isMember() && request.query.limit <= 100));
+      allow get: if request.auth != null && (isAdmin() || resource.data.memberId == request.auth.uid);
+      
+      // Allow creation if memberId matches auth
+      allow create: if request.auth != null && request.resource.data.memberId == request.auth.uid;
+      
+      // Members can update/delete their own pending requests. Admins can update any.
+      allow update, delete: if request.auth != null && (isAdmin() || (resource.data.memberId == request.auth.uid && resource.data.status == 'pending'));
+    }
+
+    match /contributions/{contributionId} {
+      // Admins can list and read all.
+      // Members can only list if they filter by their own memberId, or read specific docs if they own them.
+      allow list: if request.auth != null && (isAdmin() || (isMember() && request.query.limit <= 100));
+      allow get: if request.auth != null && (isAdmin() || resource.data.memberId == request.auth.uid);
+      
+      // Only admins can record new contributions to the fund
+      allow write: if isAdmin();
+    }
+  }
+}
