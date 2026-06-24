@@ -34,7 +34,7 @@ export default function LandingPage() {
             <div className="flex flex-col items-center space-y-4 text-center">
               <div className="space-y-2">
                 <h1 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Sinking Loan<br />
+                  SINKING LOAN<br />
                   <span className="text-accent">Management 2027</span>
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl font-body">
@@ -95,11 +95,11 @@ export default function LandingPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                    <span className="text-sm font-medium">=SUM(Payments) for real-time ledgers</span>
+                    <span className="text-sm font-medium">=SUM (Payments) for real-time ledgers</span>
                   </div>
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                    <span className="text-sm font-medium">=IF(Balance &lt;= 0, "Paid", "Active")</span>
+                    <span className="text-sm font-medium">=IF (Balance &lt;= 0, "Fullypaid")</span>
                   </div>
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
@@ -134,8 +134,8 @@ export default function LandingPage() {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">PRINCIPAL</p>
-                        <div className="font-code text-xs text-slate-400 mb-2">= SUM ( B14 : B20 )</div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">PRINCIPAL_AMOUNT</p>
+                        <div className="font-code text-xs text-slate-400 mb-2">= SUM ( D5 : D20 )</div>
                         <p className="text-xl font-headline font-bold text-green-400">₱480,000</p>
                       </div>
                       <div className="bg-white/5 p-4 rounded-xl border border-white/5">
@@ -148,7 +148,7 @@ export default function LandingPage() {
                     <div className="pt-4 flex items-center justify-center">
                       <div className="bg-white/5 px-4 py-2 rounded-full flex items-center gap-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                        <span className="text-[10px] font-bold text-slate-300 uppercase">Formula Engine Active</span>
+                        <span className="text-[10px] font-bold text-slate-300 uppercase">Formula Engine Active by Daryl</span>
                       </div>
                     </div>
                   </div>

@@ -1,14 +1,20 @@
-import type { Metadata } from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 import { Toaster } from '@/components/ui/toaster';
+import ServiceWorker from '@/components/ServiceWorker';
+import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
   title: 'DaryLoan | Smart Loan Management',
   description: 'Automate member records, loan management, and financial reporting with DaryLoan.',
+  manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico'
+    icon: '/favicon.ico',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
 };
 
 export default function RootLayout({
@@ -28,6 +34,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen">
         <FirebaseClientProvider>
+        <ServiceWorker />
           {children}
           <Toaster />
         </FirebaseClientProvider>

@@ -1,5 +1,5 @@
-export const playNotification = () => {
-  const audio = new Audio('/sounds/notification.mp3');
+export const notification = () => {
+  const audio = new Audio('/sounds/notification.wav');
   audio.volume = 0.8;
   audio.play().catch(err => {
     console.log('Audio playback blocked:', err);
