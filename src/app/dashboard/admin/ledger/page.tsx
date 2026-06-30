@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -9,58 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Search, 
-  Download,
-  Filter,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  ChevronDown,
-  Edit,
-  Trash2,
-  Plus,
-  MessageSquareText,
-  AlertCircle,
-  Loader2,
-  FileText,
-  FileBox,
-  Calendar as CalendarIcon,
-  Users,
-  User
-} from 'lucide-react';
+import { Search, Download, Filter, CheckCircle2, Clock, TrendingUp, ChevronDown, Edit, Trash2, Plus, MessageSquareText, AlertCircle, Loader2, FileText, FileBox, Calendar as CalendarIcon, Users, User, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirestore, useCollection } from '@/firebase';
@@ -427,14 +382,14 @@ export default function AdminLedgerPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-bold text-[10px] uppercase py-4 pl-6">Member / Account</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase">Principal</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase">Interest</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase">Total Payable</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-center">Month 1</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-center">Month 2</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-center">Month 3</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase text-right pr-6">Actions</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase py-4 pl-6">Member / Account</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase">Principal</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase">Interest</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase">Total Payable</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase text-center">Month 1</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase text-center">Month 2</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase text-center">Month 3</TableHead>
+                  <TableHead className="font-bold text-[12px] uppercase text-right pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -442,20 +397,39 @@ export default function AdminLedgerPage() {
                   <TableRow key={tx.id} className="hover:bg-slate-50 transition-colors">
                     <TableCell className="pl-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-sm">{tx.memberName}</span>
+                            <span className="text-[15px] text-muted-foreground flex items-center gap-1 font-bold">
+                              <User className="h-4 w-4" /> Member: {tx.memberName}
+                            </span>
                          <div className="flex flex-col gap-0.5 mt-0.5">
-                          {tx.loanerName && tx.loanerName !== tx.memberName && (
-                            <span className="text-[10px] text-primary italic font-medium flex items-center gap-1">
-                              <User className="h-2 w-2" /> For: {tx.loanerName}
-                            </span>
-                          )}
                           {tx.comakerName && (
-                            <span className="text-[9px] text-muted-foreground uppercase flex items-center gap-1 font-bold">
-                              <Users className="h-2 w-2" /> Co-Maker: {tx.comakerName}
+                            <span className="text-[15px] text-muted-foreground flex items-center gap-1 font-bold">
+                              <Users className="h-4 w-4" /> Co-Maker: {tx.comakerName}
                             </span>
                           )}
-                          <span className="text-[10px] text-muted-foreground uppercase">{tx.purpose}</span>
+                          {tx.loanerName && tx.loanerName !== tx.memberName && (
+                            <span className="text-[15px] text-primary font-medium flex items-center gap-1">
+                              <User className="h-4 w-4" /> For: {tx.loanerName}
+                            </span>
+                          )}
+                            <span className="text-[12px] text-muted-foreground flex items-center gap-1 font-bold">
+                              <Tag className="h-3 w-3" />Purpose: {tx.purpose}
+                            </span>
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-bold text-red-600 text-sm">
+                      ₱{tx.amount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="font-bold text-red-600 text-sm">
+                      ₱{tx.interest.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-900 text-sm">
+                      ₱{tx.total.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <StatusSelect id={tx.id} monthKey="month1" currentStatus={tx.month1} />
+                        <DateSelect id={tx.id} monthDateKey="month1Date" currentDate={tx.month1Date} />
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -479,7 +453,7 @@ export default function AdminLedgerPage() {
                   </TableRow>
                 ))}
               </TableBody>
-              <TableFooter className="bg-slate-50/50 font-bold border-t-2">
+              <TableFooter className="bg-slate-50/50 font-bold border-t-2 text-lg">
                 <TableRow>
                   <TableCell colSpan={1} className="pl-6 py-4">OVERALL TOTALS</TableCell>
                   <TableCell>₱{totals.amount.toLocaleString()}</TableCell>
@@ -501,7 +475,7 @@ export default function AdminLedgerPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label>Select Member</Label>
+              <Label>Select Member / Co-Maker</Label>
               <Select value={formState.memberId} onValueChange={(v) => setFormState({ ...formState, memberId: v })}>
                 <SelectTrigger><SelectValue placeholder="Choose a member" /></SelectTrigger>
                 <SelectContent>
@@ -511,18 +485,7 @@ export default function AdminLedgerPage() {
                 </SelectContent>
               </Select>
             </div>
-             <div className="space-y-2">
-              <Label>Co-Maker (Optional)</Label>
-              <Select value={formState.comakerId || 'none'} onValueChange={(v) => setFormState({ ...formState, comakerId: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Select a co-maker" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Co-Maker</SelectItem>
-                  {members?.filter(m => m.role === 'member' && m.id !== formState.memberId).map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+             
             <Input placeholder="Loaner Name" value={formState.loanerName} onChange={(e) => setFormState({ ...formState, loanerName: e.target.value })} />
             <Input placeholder="Amount (₱)" type="number" value={formState.amount} onChange={(e) => setFormState({ ...formState, amount: e.target.value })} />
             <Input placeholder="Purpose" value={formState.purpose} onChange={(e) => setFormState({ ...formState, purpose: e.target.value })} />

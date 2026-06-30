@@ -9,7 +9,7 @@ import {
   FirestoreError,
 } from 'firebase/firestore';
 
-import { errorEmitter } from '../error-emitter';
+import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '../errors';
 import { playNotification } from '@/lib/notification';
 

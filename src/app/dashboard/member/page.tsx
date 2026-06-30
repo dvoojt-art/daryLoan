@@ -7,34 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { 
-  CreditCard, 
-  TrendingUp, 
-  AlertCircle, 
-  Clock, 
-  Plus, 
-  AlertTriangle, 
-  Edit, 
-  Trash2, 
-  MessageSquareText,
-  History,
-  Loader2,
-  Wallet,
-  Coins,
-  CheckCircle2,
-  CalendarDays,
-  User,
-  ArrowRight,
-  ChevronRight
-} from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CreditCard, TrendingUp, AlertCircle, Clock, Plus, AlertTriangle, Edit, Trash2, MessageSquareText, History, Loader2, Wallet, Coins, CheckCircle2, CalendarDays, User, Users, ArrowRight, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
@@ -51,7 +25,6 @@ export default function MemberDashboard() {
   const [mounted, setMounted] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
-
   const [editingLoan, setEditingLoan] = useState<any | null>(null);
   const [editPurpose, setEditPurpose] = useState('');
   const [editAmount, setEditAmount] = useState('');
@@ -80,7 +53,24 @@ export default function MemberDashboard() {
   }, [firestore, user]);
 
   const { data: loans, loading: loansLoading } = useCollection<any>(loansQuery);
+  const allMembersQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('role', '==', 'member'));
+  }, [firestore]);
 
+  //const { data: allMembers, loading: membersLoading } = useCollection<any>(allMembersQuery);
+
+  const allLoansQuery = useMemo(() => {
+    if (!firestore) return null;
+    // Query all loans that have been approved to calculate total disbursed
+    return query(collection(firestore, 'loans'), where('status', '==', 'approved'));
+  }, [firestore]);
+
+  //const { data: allLoans, loading: allLoansLoading } = useCollection<any>(allLoansQuery);
+  const allMembers: any[] = [];
+  const allLoans: any[] = [];
+  const membersLoading = false;
+  const allLoansLoading = false;
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     try {
@@ -99,10 +89,11 @@ export default function MemberDashboard() {
   }, [loans]);
 
   // Aggregate stats across all loans
-  const financialSummary = useMemo(() => {
-    if (!loans) return { totalBalance: 0, activeCount: 0 };
+  const { totalBalanceDue, activeLoanCount, totalCommunityShares, totalDisbursed } = useMemo(() => {
+    const initial = { totalBalanceDue: 0, activeLoanCount: 0 };
+    if (!loans || !allMembers || !allLoans) return { ...initial, totalCommunityShares: 0, totalDisbursed: 0 };
     
-    return loans.reduce((acc, l) => {
+    const summary = loans.reduce((acc, l) => {
       if (l.status === 'approved' || l.status === 'overdue') {
         const amount = l.amount || 0;
         const term = l.termMonths || 1;
@@ -122,12 +113,21 @@ export default function MemberDashboard() {
         if (l.month2 === 'paid') paidAmount += monthlyAmount;
         if (l.month3 === 'paid') paidAmount += monthlyAmount;
 
-        acc.totalBalance += Math.max(0, totalPayable - paidAmount);
-        acc.activeCount++;
+        acc.totalBalanceDue += Math.max(0, totalPayable - paidAmount);
+        acc.activeLoanCount++;
       }
       return acc;
-    }, { totalBalance: 0, activeCount: 0 });
-  }, [loans]);
+    }, initial);
+
+    const totalCapital = allMembers.reduce((acc, m) => acc + (m.totalContributions || 0), 0);
+    const disbursed = allLoans.reduce((acc, l) => acc + (l.amount || 0), 0);
+
+    return {
+      ...summary,
+      totalCommunityShares: totalCapital,
+      totalDisbursed: disbursed,
+    };
+  }, [loans, allMembers, allLoans]);
 
   const loanMetrics = useMemo(() => {
     if (!activeLoan) return null;
@@ -212,7 +212,7 @@ export default function MemberDashboard() {
         <div>
           <h1 className="text-4xl font-headline font-bold text-slate-900 tracking-tight">Personal Credit Hub</h1>
           <p className="text-muted-foreground flex items-center gap-2 mt-1">
-            <User className="h-4 w-4" /> Welcome back, <span className="font-bold text-slate-800">{profile?.name || user?.email || 'Member'}</span>
+            <Users className="h-4 w-4" /> Welcome back, Members!
           </p>
         </div>
         <Button asChild className="bg-accent hover:bg-accent/90 text-white font-bold h-12 px-8 rounded-xl shadow-lg shadow-accent/20">
@@ -224,9 +224,9 @@ export default function MemberDashboard() {
 
       <div className="grid gap-6 sm:grid-cols-3">
         {[
-          { label: 'Total Balance Due', value: `₱${financialSummary.totalBalance.toLocaleString()}`, icon: CreditCard, color: 'text-primary', sub: `${financialSummary.activeCount} active obligations` },
-          { label: 'Community Shares', value: (profile?.shares || 0).toLocaleString(), icon: Coins, color: 'text-accent', sub: 'Your community stake' },
-          { label: 'Distributed Profit', value: `₱${(profile?.profit || 0).toLocaleString()}`, icon: TrendingUp, color: 'text-green-600', sub: 'Dividends earned' },
+          { label: 'Total Balance Due', value: `₱${totalBalanceDue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: CreditCard, color: 'text-primary', sub: `${activeLoanCount} active obligations` },
+          { label: 'Total Community Capital', value: `₱${totalCommunityShares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Wallet, color: 'text-green-500', sub: 'Combined member savings' },
+          { label: 'Total Community Disbursed', value: `₱${totalDisbursed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Coins, color: 'text-red-600', sub: 'Total loans released' },
         ].map((stat, i) => (
           <Card key={i} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
@@ -235,7 +235,7 @@ export default function MemberDashboard() {
             <CardContent className="flex items-center justify-between">
               <div>
                 <div className={cn("text-3xl font-bold", stat.color)}>
-                  {profileLoading ? <Loader2 className="h-6 w-6 animate-spin opacity-20" /> : stat.value}
+                  {profileLoading || membersLoading || allLoansLoading ? <Loader2 className="h-6 w-6 animate-spin opacity-20" /> : stat.value}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1 font-medium">{stat.sub}</p>
               </div>
@@ -252,7 +252,7 @@ export default function MemberDashboard() {
           <CardHeader className="bg-slate-900 text-white pb-8">
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="text-xl font-headline">My Active Loans</CardTitle>
+                <CardTitle className="text-xl font-headline">Member Active Loans</CardTitle>
                 <CardDescription className="text-slate-400">Tracking repayment progress and installments</CardDescription>
               </div>
               {activeLoan && (
@@ -280,43 +280,18 @@ export default function MemberDashboard() {
                       </div>
                       <Progress value={loanMetrics?.progressPercent} className="h-2" />
                     </div>
-                    
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Next Due Date</span>
-                        <CalendarDays className="h-4 w-4 text-primary" />
-                      </div>
-                      <p className="text-xl font-bold text-slate-800">{loanMetrics?.nextDueDate}</p>
-                    </div>
                   </div>
 
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                        <p className="text-[9px] font-bold text-primary/70 uppercase mb-1">Principal</p>
+                        <p className="text-[10px] font-bold text-primary/70 uppercase mb-1">Principal</p>
                         <p className="text-lg font-bold">₱{activeLoan.amount.toLocaleString()}</p>
                       </div>
                       <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
-                        <p className="text-[9px] font-bold text-accent/70 uppercase mb-1">Total Due</p>
-                        <p className="text-lg font-bold">₱{loanMetrics?.totalPayable.toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-red-600 uppercase mb-1">Total Due</p>
+                        <p className="text-lg font-bold text-red-600">₱{loanMetrics?.totalPayable.toLocaleString()}</p>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Installment Status</p>
-                        <div className="flex gap-2">
-                            {['month1', 'month2', 'month3'].slice(0, loanMetrics?.totalMonths).map((m, i) => (
-                                <div key={m} className="flex-1 p-3 rounded-lg border bg-white flex flex-col items-center gap-2">
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase">M{i+1}</span>
-                                    <div className={cn(
-                                        "h-2 w-full rounded-full",
-                                        activeLoan[m] === 'paid' ? "bg-green-500" :
-                                        activeLoan[m] === 'late' ? "bg-red-500" : "bg-slate-200"
-                                    )} />
-                                    <span className="text-[8px] font-bold uppercase">{activeLoan[m] || 'pending'}</span>
-                                </div>
-                            ))}
-                        </div>
                     </div>
                   </div>
                 </div>
@@ -371,7 +346,7 @@ export default function MemberDashboard() {
                   Your credit account is currently clear. You have no pending repayments at this time.
                 </p>
                 <Button asChild variant="outline" className="gap-2">
-                  <Link href="/dashboard/member/request">Request Credit Line <ArrowRight className="h-4 w-4" /></Link>
+                  <Link href="/dashboard/member/request">Request a Loan <ArrowRight className="h-4 w-4" /></Link>
                 </Button>
               </div>
             )}
@@ -397,10 +372,10 @@ export default function MemberDashboard() {
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
-                            <p className="text-[10px] font-bold text-slate-800 uppercase tracking-tight">Re: {l.purpose}</p>
-                            <span className="text-[8px] text-muted-foreground font-mono">{formatDate(l.requestDate)}</span>
+                            <p className="text-[12px] font-bold text-slate-800 uppercase tracking-tight">Re: {l.purpose}</p>
+                            <p className="text-[12px] text-bold text-slate-800 uppercase tracking-tight">{formatDate(l.requestDate)}</p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">"{l.adminNote}"</p>
+                          <p className="text-[15px] text-muted-foreground mt-1 leading-relaxed">"{l.adminNote}"</p>
                         </div>
                      </div>
                    ))}
@@ -416,13 +391,13 @@ export default function MemberDashboard() {
             <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                     <span className="text-xs">Savings Goal Progress</span>
-                    <span className="text-xs font-bold text-accent">75%</span>
+                    <span className="text-xs font-bold text-accent">100%</span>
                 </div>
                 <Progress value={75} className="h-1 bg-white/10" />
-                <p className="text-[10px] text-slate-400 leading-relaxed italic">
+                <p className="text-[12px] text-slate-400 leading-relaxed italic">
                     Your consistent contributions strengthen the community pool and increase your personal borrowing power.
                 </p>
-                <Button variant="ghost" className="w-full text-xs text-accent hover:text-white hover:bg-white/5 border border-accent/20 h-9" asChild>
+                <Button variant="ghost" className="w-full text-md text-accent hover:text-white hover:bg-white/5 border border-accent/20 h-9" asChild>
                     <Link href="/dashboard/member/lenders">View Verified Members <ChevronRight className="h-3 w-3 ml-1" /></Link>
                 </Button>
             </CardContent>

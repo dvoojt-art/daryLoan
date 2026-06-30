@@ -51,7 +51,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
               // Only trigger if truly new
               if (!seenIds.current.has(id)) {
                 seenIds.current.add(id);
-                notification();
+                playNotification();
               }
             }
           });

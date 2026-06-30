@@ -223,8 +223,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Wallet className="h-6 w-6 text-accent" />
               <div className="flex flex-col -space-y-1">
                 <span className="font-headline text-xl">
-                  <span className="font-bold text-white">Dary</span>
-                  <span className="text-accent font-medium">Loan</span>
+                  <span className="font-medium text-white">Dary</span>
+                  <span className="text-accent font-bold">Loan</span>
                 </span>
                 <span className="text-[10px] text-slate-300 font-medium leading-none">Problema mo'y may solusyon!</span>
               </div>

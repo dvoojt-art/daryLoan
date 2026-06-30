@@ -314,7 +314,7 @@ export default function AdminMembersManagement() {
                 <FileText className="h-4 w-4 text-red-500" /> Export as PDF
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportDOCX} className="gap-2 cursor-pointer">
-                <FileBox className="h-4 w-4 text-blue-500" /> Export as Word (.docx)
+                <FileBox className="h-4 w-4 text-blue-500" /> Export as Word
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -396,22 +396,18 @@ export default function AdminMembersManagement() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
-              <Filter className="h-4 w-4" /> Advanced Filter
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                <TableHead className="w-[250px] font-bold text-slate-800 text-[11px] uppercase tracking-wider py-4 pl-6">Member Profile</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Member ID</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Shares</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Contributions</TableHead>
-                <TableHead className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-right">Profits</TableHead>
-                <TableHead className="text-right font-bold text-slate-800 text-[11px] uppercase tracking-wider pr-6">Actions</TableHead>
+                <TableHead className="w-[250px] font-bold text-slate-800 text-[12px] uppercase tracking-wider py-4 pl-6">Member Profile</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[12px] uppercase tracking-wider">Status</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[12px] uppercase tracking-wider text-right">Shares</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[12px] uppercase tracking-wider text-right">Contributions</TableHead>
+                <TableHead className="font-bold text-slate-800 text-[12px] uppercase tracking-wider text-right">Profits</TableHead>
+                <TableHead className="text-right font-bold text-slate-800 text-[12px] uppercase tracking-wider pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -451,11 +447,6 @@ export default function AdminMembersManagement() {
                       )}
                     >
                       {member.status || 'pending'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-[10px] tracking-tighter uppercase border-slate-200 text-slate-500">
-                      {(member.id || 'new').substring(0, 8).toUpperCase()}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold text-slate-700">

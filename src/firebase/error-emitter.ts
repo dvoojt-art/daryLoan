@@ -1,16 +1,17 @@
-'use client';
+type Listener = (error: unknown) => void;
 
-import { EventEmitter } from 'events';
-import { FirestorePermissionError } from './errors';
+const listeners: Listener[] = [];
 
-class ErrorEmitter extends EventEmitter {
-  emit(event: 'permission-error', error: FirestorePermissionError): boolean {
-    return super.emit(event, error);
-  }
+export const errorEmitter = {
+  emit: (error: unknown) => {
+    listeners.forEach(fn => fn(error));
+  },
 
-  on(event: 'permission-error', listener: (error: FirestorePermissionError) => void): this {
-    return super.on(event, listener);
-  }
-}
-
-export const errorEmitter = new ErrorEmitter();
+  subscribe: (fn: Listener) => {
+    listeners.push(fn);
+    return () => {
+      const i = listeners.indexOf(fn);
+      if (i > -1) listeners.splice(i, 1);
+    };
+  },
+};

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wallet, ShieldCheck, User, Users, ArrowRight, Lock, Mail, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Wallet, ShieldCheck, User, Lock, Mail, Loader2, ArrowLeft, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '@/firebase';
@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent, role: 'admin' | 'member') => {
+  const handleLogin = async (e: React.FormEvent, role: 'admin' ) => {
     e.preventDefault();
     if (!auth) return;
 
@@ -34,9 +34,7 @@ export default function LoginPage() {
       // Admin can access both portals.
       if (userEmail === 'admin@daryloan.com') {
         router.push(`/dashboard/${role}`);
-      // Members can only access the member portal.
-      } else if (userEmail && role === 'member') {
-        router.push('/dashboard/member');
+      
       // Deny access if a member tries to log into the admin portal.
       } else {
         await auth.signOut();
@@ -89,75 +87,6 @@ export default function LoginPage() {
         </div>
 
         <Card className="border-none shadow-xl overflow-hidden">
-          <Tabs defaultValue="member" className="w-full">
-            <div className="bg-muted/50 p-1 border-b">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="member" className="flex items-center gap-2">
-                  <User className="h-4 w-4" /> Member
-                </TabsTrigger>
-                <TabsTrigger value="admin" className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" /> Admin
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <TabsContent value="member">
-              <form onSubmit={(e) => handleLogin(e, 'member')}>
-                <CardHeader>
-                  <CardTitle className="text-xl">Member Login</CardTitle>
-                  <CardDescription>Enter credentials to access your portal.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="member-email">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="member-email" 
-                        type="email" 
-                        placeholder="sinking@daryloan.com" 
-                        className="pl-10" 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="member-password">Password</Label>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="member-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        className="pl-10 pr-10"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-4">
-                  <Button type="submit" className="w-full bg-accent hover:bg-[#a87505] text-white font-bold" disabled={isLoading}><User className="h-4 w-4" />
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Sign in as Member'}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="admin">
               <form onSubmit={(e) => handleLogin(e, 'admin')}>
                 <CardHeader>
                   <CardTitle className="text-xl text-primary">Admin Portal</CardTitle>
@@ -181,7 +110,7 @@ export default function LoginPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="admin-password">Password</Label>
+                      <Label htmlFor="admin-password">Admin Password</Label>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -211,9 +140,6 @@ export default function LoginPage() {
                   </Button>
                 </CardFooter>
               </form>
-            </TabsContent>
-          </Tabs>
-          
           <div className="px-6 py-8 text-center bg-[#010642]">
             <p className="text-[10px] text-slate-400 leading-relaxed max-w-[280px] mx-auto">
               By logging in, you agree to our{' '}

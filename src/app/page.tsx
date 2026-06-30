@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Wallet, ShieldCheck, PieChart, Zap, ArrowRight, CheckCircle2, Table as TableIcon, FunctionSquare } from 'lucide-react';
+import { Wallet, Users, ShieldCheck, ArrowRight, CheckCircle2, Table as TableIcon, FunctionSquare } from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -11,69 +11,43 @@ export default function LandingPage() {
           <Wallet className="h-6 w-6 text-accent" />
           <div className="flex flex-col -space-y-1">
             <span className="font-headline text-xl tracking-tighter">
-              <span className="font-bold text-white">Dary</span>
-              <span className="text-accent font-medium">Loan</span>
+              <span className="font-medium text-white">Dary</span>
+              <span className="text-accent font-bold">Loan</span>
             </span>
-            <span className="text-[10px] text-slate-300 font-medium leading-none">Problema mo'y may solusyon!</span>
+            <span className="text-[10px] text-slate-300 font-medium italic leading-none">Problema mo'y may solusyon!</span>
           </div>
         </Link>
-        <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-sm font-medium text-slate-200 hover:text-white transition-colors" href="#features">
-            Features
+        <Button className="h-8 px-3 rounded-full text-sm text-accent hover:bg-[#a87505] hover:text-white ml-auto flex gap-4 sm:gap-6">
+          <Link href="/login2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-white-500" />
+              <span className="font-semibold">Admin Portal</span>
+            </div>
           </Link>
-          <Link className="text-sm font-medium text-slate-200 hover:text-white transition-colors" href="/login">
-            Admin Portal
-          </Link>
-        </nav>
+        </Button>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1"> 
         {/* Hero Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-gradient-to-b from-white to-background">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center space-y-4 text-center">
+               <img src="/coins.png" width={120} height={75}
+                  className="rounded-xl shadow-lg"
+                  />
               <div className="space-y-2">
                 <h1 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  SINKING LOAN<br />
-                  <span className="text-accent">Management 2027</span>
+                  SF<br />
+                  <span className="text-accent">Tracker 2026</span>
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl font-body">
-                  Automate records, streamline collections, and make data-driven decisions with our AI-powered fintech platform.
+                  Automate records, streamline collections, and manage your sinking funds with ease.
                 </p>
               </div>
               <div className="flex justify-center">
-                <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-white border-none shadow-md">
-                  <Link href="/login">Access DaryLoan Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Button asChild size="lg" className="bg-accent hover:bg-[#a87505] text-white border-none shadow-md">
+                  <Link href="/login"><Users className="h-4 w-4" />Access DaryLoan Portal <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-white">
-          <div className="container px-4 md:px-6">
-            <div className="grid gap-12 lg:grid-cols-3">
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="bg-primary/10 p-4 rounded-2xl">
-                  <ShieldCheck className="h-8 w-8 text-primary" />
-                </div>
-                <h2 className="text-xl font-headline font-bold">Secure Gated Roles</h2>
-                <p className="text-muted-foreground">Dedicated portals for Admins and Members with custom permissions and security layers.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="bg-accent/10 p-4 rounded-2xl">
-                  <Zap className="h-8 w-8 text-accent" />
-                </div>
-                <h2 className="text-xl font-headline font-bold">AI Risk Tool</h2>
-                <p className="text-muted-foreground">Generative AI analyzes contribution history to provide instant risk assessments for loans.</p>
-              </div>
-              <div className="flex flex-col items-center space-y-4 text-center">
-                <div className="bg-primary/10 p-4 rounded-2xl">
-                  <PieChart className="h-8 w-8 text-primary" />
-                </div>
-                <h2 className="text-xl font-headline font-bold">Smart Reporting</h2>
-                <p className="text-muted-foreground">Real-time dashboards for disbursements, collections, and total outstanding balances.</p>
               </div>
             </div>
           </div>
@@ -125,7 +99,7 @@ export default function LandingPage() {
                   
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Formula Input (Cell B14)</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Formula Input (Cell D14)</label>
                       <div className="bg-white/10 p-4 rounded-xl font-code text-sm text-accent border border-white/10 flex items-center gap-3">
                         <span className="text-accent font-bold">fx</span>
                         <span className="text-white">= AMOUNT * ( INTEREST_RATE * 1 MONTH )</span>
@@ -163,6 +137,9 @@ export default function LandingPage() {
         <div className="container px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-400">© 2026 DaryLoan Inc. All rights reserved.</p>
           <nav className="flex gap-4 sm:gap-6">
+            <Link className="text-sm text-slate-400 hover:text-white hover:underline underline-offset-4 transition-colors" href="/features">
+              Features
+            </Link>
             <Link className="text-sm text-slate-400 hover:text-white hover:underline underline-offset-4 transition-colors" href="/privacy">
               Privacy
             </Link>

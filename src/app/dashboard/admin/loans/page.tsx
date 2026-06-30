@@ -181,9 +181,6 @@ export default function AdminLoanApprovals() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Filter className="h-4 w-4" /> Filter
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -196,10 +193,10 @@ export default function AdminLoanApprovals() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/50">
-                    <TableHead className="font-bold py-4 pl-6 uppercase text-[10px] tracking-widest">Loaner / Account</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest">Principal</TableHead>
-                    <TableHead className="font-bold hidden md:table-cell uppercase text-[10px] tracking-widest">Request Date</TableHead>
-                    <TableHead className="text-right font-bold pr-6 uppercase text-[10px] tracking-widest">Quick Review</TableHead>
+                    <TableHead className="font-bold py-4 pl-6 uppercase text-[12px] tracking-widest">Loaner / Account</TableHead>
+                    <TableHead className="font-bold uppercase text-[12px] tracking-widest">Principal</TableHead>
+                    <TableHead className="font-bold hidden md:table-cell uppercase text-[12px] tracking-widest">Request Date</TableHead>
+                    <TableHead className="text-right font-bold pr-6 uppercase text-[12px] tracking-widest">Quick Review</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

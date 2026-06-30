@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
-  Users, 
+  Users,
+  Tag, 
   HandCoins, 
   TrendingUp, 
   Clock, 
@@ -104,11 +105,27 @@ export default function AdminDashboard() {
 
        const recentActivityWithNames = useMemo(() => {
     if (!recentActivity || !allMembers) return [];
-    return recentActivity.map((loan: any) => {
+    return recentActivity.map((loan) => {
       const member = allMembers.find((m: any) => m.id === loan.memberId);
+      
+      // Calculate financial details
+      const amount = loan.amount || 0;
+      const term = loan.termMonths || 1;
+      const rate = term === 0.25 ? 0.05 : 0.10 * term;
+      const interest = amount * rate;
+      const principalPlusInterest = amount + interest;
+
+      let penalties = 0;
+      if (loan.month1 === 'late') penalties += principalPlusInterest * 0.10;
+      if (loan.month2 === 'late') penalties += principalPlusInterest * 0.10;
+      if (loan.month3 === 'late') penalties += principalPlusInterest * 0.10;
+
       return {
         ...loan,
         resolvedName: loan.loanerName || member?.name || member?.email || `Member ${loan.memberId.substring(0, 5)}`,
+        principal: amount,
+        interest,
+        totalPayable: principalPlusInterest + penalties,
       };
     });
   }, [recentActivity, allMembers]);
@@ -149,7 +166,7 @@ export default function AdminDashboard() {
         ['Total Capital Pool', `P${stats.totalCapital.toLocaleString()}`, 'Available'],
         ['Active Members', stats.activeMembersCount.toString(), 'Verified'],
         ['Capital Disbursed', `P${stats.totalDisbursed.toLocaleString()}`, 'Circulating'],
-        ['Estimated Yield', `P${stats.estimatedInterest.toLocaleString()}`, 'Projected'],
+        ['Estimated Profit', `P${stats.estimatedInterest.toLocaleString()}`, 'Projected'],
         ['Review Queue', stats.pendingCount.toString(), 'Pending AI'],
         ['Overdue Accounts', stats.overdueCount.toString(), stats.overdueCount > 0 ? 'High Risk' : 'Healthy'],
       ],
@@ -211,7 +228,7 @@ export default function AdminDashboard() {
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Total Community Capital")] }), new TableCell({ children: [new Paragraph(`P${stats.totalCapital.toLocaleString()}`)] })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Active Members")] }), new TableCell({ children: [new Paragraph(stats.activeMembersCount.toString())] })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Capital Disbursed")] }), new TableCell({ children: [new Paragraph(`P${stats.totalDisbursed.toLocaleString()}`)] })] }),
-              new TableRow({ children: [new TableCell({ children: [new Paragraph("Estimated Yield")] }), new TableCell({ children: [new Paragraph(`P${stats.estimatedInterest.toLocaleString()}`)] })] }),
+              new TableRow({ children: [new TableCell({ children: [new Paragraph("Estimated Profit")] }), new TableCell({ children: [new Paragraph(`P${stats.estimatedInterest.toLocaleString()}`)] })] }),
               new TableRow({ children: [new TableCell({ children: [new Paragraph("Review Queue")] }), new TableCell({ children: [new Paragraph(stats.pendingCount.toString())] })] }),
             ],
           }),
@@ -267,7 +284,7 @@ export default function AdminDashboard() {
               <FileText className="h-4 w-4 text-red-500" /> Export as PDF
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleExportDOCX} className="gap-2 cursor-pointer">
-              <FileBox className="h-4 w-4 text-blue-500" /> Export as Word (.docx)
+              <FileBox className="h-4 w-4 text-blue-500" /> Export as Word
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -297,19 +314,19 @@ export default function AdminDashboard() {
           { label: 'Total Capital', value: `₱${stats.totalCapital.toLocaleString()}`, sub: 'Member savings', icon: Wallet, color: 'text-primary' },
           { label: 'Active Members', value: stats.activeMembersCount, sub: 'Verified lenders', icon: Users, color: 'text-primary' },
           { label: 'Capital Disbursed', value: `₱${stats.totalDisbursed.toLocaleString()}`, sub: 'Principal in circulation', icon: HandCoins, color: 'text-accent' },
-          { label: 'Estimated Yield', value: `₱${stats.estimatedInterest.toLocaleString()}`, sub: 'Calculated 10% monthly', icon: TrendingUp, color: 'text-green-500' },
+          { label: 'Estimated Profit', value: `₱${stats.estimatedInterest.toLocaleString()}`, sub: 'Calculated 10% monthly', icon: TrendingUp, color: 'text-green-500' },
           { label: 'Review Queue', value: stats.pendingCount, sub: 'Awaiting assessment', icon: Zap, color: 'text-accent', bg: 'bg-slate-800 text-white' },
         ].map((s, idx) => (
           <Card key={idx} className={cn("border-none shadow-sm transition-all hover:shadow-md", s.bg)}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-[10px] font-bold uppercase tracking-widest opacity-70">{s.label}</CardTitle>
+              <CardTitle className="text-[12px] font-bold uppercase tracking-widest opacity-70">{s.label}</CardTitle>
               <s.icon className={cn("h-4 w-4", s.color)} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {loansLoading || membersLoading ? <Loader2 className="h-6 w-6 animate-spin opacity-20" /> : s.value}
               </div>
-              <p className="text-[10px] opacity-70 font-medium mt-1">{s.sub}</p>
+              <p className="text-[12px] opacity-70 font-medium mt-1">{s.sub}</p>
             </CardContent>
           </Card>
         ))}
@@ -317,13 +334,13 @@ export default function AdminDashboard() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Operational Links</h2>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Operational Links</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Link href="/dashboard/admin/loans" className="block group">
               <Card className="border-none shadow-sm group-hover:bg-primary transition-colors">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-sm font-bold group-hover:text-white">Loan Approvals</CardTitle>
+                    <CardTitle className="text-md font-bold group-hover:text-white">Loan Approvals</CardTitle>
                     <Badge variant="outline" className="group-hover:border-white group-hover:text-white">{stats.pendingCount}</Badge>
                   </div>
                 </CardHeader>
@@ -332,7 +349,7 @@ export default function AdminDashboard() {
             </Link>
             <Link href="/dashboard/admin/ledger" className="block group">
               <Card className="border-none shadow-sm group-hover:bg-accent transition-colors">
-                <CardHeader><CardTitle className="text-sm font-bold group-hover:text-white">Master Ledger</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-md font-bold group-hover:text-white">Master Ledger</CardTitle></CardHeader>
                 <CardContent className="flex justify-end"><ArrowRight className="h-4 w-4 group-hover:text-white" /></CardContent>
               </Card>
             </Link>
@@ -361,14 +378,19 @@ export default function AdminDashboard() {
                     )}>
                       {loan.status === 'approved' ? <CheckCircle2 className="h-4 w-4" /> : 
                        loan.status === 'pending' ? <Clock className="h-4 w-4" /> : 
-                       loan.status === 'overdue' ? <AlertTriangle className="h-4 w-4" /> : <Coins className="h-4 w-4" />}
+                       loan.status === 'overdue' ? <AlertTriangle className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <p className="text-sm font-bold text-slate-800">{loan.resolvedName} - ₱{loan.amount.toLocaleString()}</p>
-                        <Badge variant="outline" className="text-[8px] h-4 uppercase">{loan.status}</Badge>
+                        <p className="text-md font-bold text-slate-800">{loan.resolvedName}</p>
+                        <Badge variant="outline" className="text-[10px] h-4 uppercase">{loan.status}</Badge>
                       </div>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-tight">{loan.purpose} • {formatDate(loan.requestDate)}</p>
+                      <p className="text-[12px] text-muted-foreground uppercase tracking-tight font-medium">&#128197; {formatDate(loan.requestDate)} | &#127991;&#65039; {loan.purpose}</p>
+                      <div className="text-xs font-mono text-slate-600 mt-2 flex gap-4">
+                        <span>Principal: <span className="font-bold">₱{loan.principal.toLocaleString()}</span></span>|
+                        <span>Interest: <span className="font-bold">₱{loan.interest.toLocaleString()}</span></span>|
+                        <span>Total Payable: <span className="font-bold">₱{loan.totalPayable.toLocaleString()}</span></span>
+                      </div>
                     </div>
                   </div>
                 ))}
