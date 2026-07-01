@@ -89,7 +89,7 @@ export default function LoginPage() {
         <Card className="border-none shadow-xl overflow-hidden">
               <form onSubmit={(e) => handleLogin(e, 'admin')}>
                 <CardHeader>
-                  <CardTitle className="text-xl text-primary">Admin Portal</CardTitle>
+                  <CardTitle className="text-xl text-primary">Admin Login</CardTitle>
                   <CardDescription>Restricted access for system administrators.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

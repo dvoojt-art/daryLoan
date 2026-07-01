@@ -58,19 +58,15 @@ export default function MemberDashboard() {
     return query(collection(firestore, 'users'), where('role', '==', 'member'));
   }, [firestore]);
 
-  //const { data: allMembers, loading: membersLoading } = useCollection<any>(allMembersQuery);
+  const { data: allMembers, loading: membersLoading } = useCollection<any>(allMembersQuery);
 
   const allLoansQuery = useMemo(() => {
     if (!firestore) return null;
     // Query all loans that have been approved to calculate total disbursed
-    return query(collection(firestore, 'loans'), where('status', '==', 'approved'));
+    return query(collection(firestore, 'loans'), where('status', 'in', ['approved', 'repaid', 'overdue']));
   }, [firestore]);
 
-  //const { data: allLoans, loading: allLoansLoading } = useCollection<any>(allLoansQuery);
-  const allMembers: any[] = [];
-  const allLoans: any[] = [];
-  const membersLoading = false;
-  const allLoansLoading = false;
+  const { data: allLoans, loading: allLoansLoading } = useCollection<any>(allLoansQuery);
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     try {

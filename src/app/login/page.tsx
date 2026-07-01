@@ -160,7 +160,7 @@ export default function LoginPage() {
             <TabsContent value="admin">
               <form onSubmit={(e) => handleLogin(e, 'admin')}>
                 <CardHeader>
-                  <CardTitle className="text-xl text-primary">Admin Portal</CardTitle>
+                  <CardTitle className="text-xl text-primary">Admin Login</CardTitle>
                   <CardDescription>Restricted access for system administrators.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -181,7 +181,7 @@ export default function LoginPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="admin-password">Password</Label>
+                      <Label htmlFor="admin-password">Admin Password</Label>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
