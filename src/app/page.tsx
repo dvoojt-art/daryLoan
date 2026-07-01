@@ -38,7 +38,7 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-headline font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                   SINKING FUNDS<br />
-                  <span className="text-accent">Tracker 2026</span>
+                  <span className="text-accent">Tracker</span>
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl font-body">
                   Automate records, streamline collections, and manage your sinking funds with ease.
