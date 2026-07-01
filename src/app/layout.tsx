@@ -6,7 +6,7 @@ import type { Metadata, Viewport } from "next";
 import { errorEmitter } from '@/firebase/error-emitter';
 
 export const metadata: Metadata = {
-  title: "DaryLoan | Smart Loan Management",
+  title: "DaryLoan | Sinking Funds Tracker",
   description:
     "Automate member records, loan management, and financial reporting with DaryLoan.",
   icons: {
